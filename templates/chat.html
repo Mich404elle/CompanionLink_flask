@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat with Melissa</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        #chat-box { width: 50%; margin: auto; }
+        .message { margin: 10px 0; }
+        .bot { color: blue; }
+        .user { color: green; }
+        .warning { color: red; margin-top: 20px; }
+        .info-box { background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        .info-box h2 { margin-top: 0; }
+        #feedback { margin-top: 20px; display: none; }
+    </style>
+</head>
+<body>
+    <div id="chat-box">
+        <h1>Chat with Melissa</h1>
+        <div class="info-box">
+            <h2>About Melissa</h2>
+            <p><strong>Name:</strong> Melissa</p>
+            <p><strong>Age:</strong> 70</p>
+            <p><strong>Location:</strong> Cozy suburban home near Toronto</p>
+            <p><strong>Family:</strong> Two sons who work abroad and rarely visit due to their busy schedules. Melissa also has grandchildren who she mentions occasionally.</p>
+            <p><strong>Hobbies:</strong> Gardening, cooking and baking, knitting, reading novels, and watching TV shows and movies.</p>
+        </div>
+        <div id="messages"></div>
+        <textarea id="message" placeholder="Type your message..."></textarea>
+        <button onclick="sendMessage()">Send</button>
+        <button onclick="endChat()">End Chat</button>
+        <div id="warning" class="warning" style="display: none;"></div>
+    </div>
+    <div id="feedback">
+        <h2>Feedback</h2>
+        <p id="feedback-message"></p>
+        <a href="/">Back to Home</a>
+    </div>
+    <script>
+        const sessionId = Date.now().toString();
+
+        async function sendMessage() {
+            const message = document.getElementById('message').value;
+            document.getElementById('messages').innerHTML += `<div class="message user">${message}</div>`;
+            document.getElementById('message').value = '';
+            const response = await fetch('/chatbot', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: message, session_id: sessionId })
+            });
+            const data = await response.json();
+            if (data.warning) {
+                document.getElementById('warning').innerText = data.warning;
+                document.getElementById('warning').style.display = 'block';
+            } else {
+                document.getElementById('warning').style.display = 'none';
+            }
+            if (data.response) {
+                document.getElementById('messages').innerHTML += `<div class="message bot">${data.response}</div>`;
+            }
+        }
+
+        async function endChat() {
+            const response = await fetch('/feedback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_id: sessionId })
+            });
+            const data = await response.json();
+            document.getElementById('feedback-message').innerText = data.feedback || 'No feedback available.';
+            document.getElementById('feedback').style.display = 'block';
+            document.getElementById('chat-box').style.display = 'none';
+        }
+    </script>
+</body>
+</html>
+
+
+

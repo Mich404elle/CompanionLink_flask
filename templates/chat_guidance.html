@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat with Guidance Bot</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        #chat-box { width: 50%; margin: auto; }
+        .message { margin: 10px 0; }
+        .bot { color: blue; }
+        .user { color: green; }
+        .warning { color: red; margin-top: 20px; }
+        .info-box { background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
+        .info-box h2 { margin-top: 0; }
+        #feedback { margin-top: 20px; display: none; }
+        /* Add some spacing at the bottom */
+        #chat-box, #feedback {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div id="chat-box">
+        <h1>Chat with Guidance Bot</h1>
+        <div id="messages"></div>
+        <textarea id="message" placeholder="Type your message..."></textarea>
+        <button onclick="sendMessage()">Send</button>
+        <div id="warning" class="warning" style="display: none;"></div>
+    </div>
+    <div id="feedback">
+        <h2>Feedback</h2>
+        <p id="feedback-message"></p>
+    </div>
+    <!-- Back to Main Menu Button -->
+    <div style="text-align: center; margin-top: 20px;">
+        <button onclick="goToMainMenu()">Back to Main Menu</button>
+    </div>
+
+    <script>
+        const sessionId = Date.now().toString();
+
+        async function sendMessage() {
+            const message = document.getElementById('message').value;
+            document.getElementById('messages').innerHTML += `<div class="message user">${message}</div>`;
+            document.getElementById('message').value = '';
+            const response = await fetch('/chatbot_guidance', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ message: message, session_id: sessionId })
+            });
+            const data = await response.json();
+            if (data.warning) {
+                document.getElementById('warning').innerText = data.warning;
+                document.getElementById('warning').style.display = 'block';
+            } else {
+                document.getElementById('warning').style.display = 'none';
+            }
+            if (data.response) {
+                document.getElementById('messages').innerHTML += `<div class="message bot">${data.response}</div>`;
+            }
+        }
+
+        // Function to navigate back to the main menu
+        function goToMainMenu() {
+            window.location.href = '/';
+        }
+    </script>
+</body>
+</html>
