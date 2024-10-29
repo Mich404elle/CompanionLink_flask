@@ -461,7 +461,7 @@ def check_response_violation(user_message, scenario_type):
         ],
         "negative_indicators": [
             ("agreement", ["sure", "okay", "yes", "could", "maybe"]),
-            ("meeting", ["meet up", "visit", "come over", "see you", "in person"]),
+            ("meeting", ["meet up", "visit", "come over", "see you"]),
             ("suggestion", ["we can", "we could", "let's", "might be able"]),
             ("location", ["somewhere", "your place", "meet at", "stop by"])
         ]
