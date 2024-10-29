@@ -515,8 +515,8 @@ def check_response_violation(user_message, scenario_type):
         if any(phrase in message_lower for phrase in phrases):
             for phrase in phrases:
                 if phrase in message_lower:
-                    context_start = max(0, message_lower.find(phrase) - 20)
-                    context_end = message_lower.find(phrase) + len(phrase) + 20
+                    context_start = max(0, message_lower.find(phrase) - 35)
+                    context_end = message_lower.find(phrase) + len(phrase) + 35
                     context = message_lower[context_start:context_end]
                     
                     if not any(neg in context for neg in ["not", "cannot", "can't", "don't", "shouldn't"]):
