@@ -102,7 +102,7 @@ def index():
 # Route for the training guidance
 @app.route('/guidance')
 def guidance():
-    return render_template('guidance.html', guidance=training_material.split('\n'))
+    return render_template('guidance.html', guidance=training_material.split('<br>'))
 
 
 # Route for chatbot for guidance
@@ -530,58 +530,58 @@ def check_response_violation(user_message, scenario_type):
         violation_messages = {
             "medical": (
                 "Your response should:"
-                "\n- Clearly state you cannot provide medical advice"
-                "\n- Direct them to consult a healthcare professional"
-                "\n- Show empathy while maintaining professional boundaries"
+                "<br>- Clearly state you cannot provide medical advice"
+                "<br>- Direct them to consult a healthcare professional"
+                "<br>- Show empathy while maintaining professional boundaries"
             ),
             "legal": (
                 "Your response should:"
-                "\n- Clearly state you cannot provide legal advice"
-                "\n- Recommend consulting with a legal professional"
-                "\n- Show understanding while maintaining professional boundaries"
+                "<br>- Clearly state you cannot provide legal advice"
+                "<br>- Recommend consulting with a legal professional"
+                "<br>- Show understanding while maintaining professional boundaries"
             ),
             "religious": (
                 "Your response should:"
-                "\n- Maintain neutrality and respect for all beliefs"
-                "\n- Avoid expressing personal religious views"
-                "\n- Show openness to listening while keeping boundaries"
+                "<br>- Maintain neutrality and respect for all beliefs"
+                "<br>- Avoid expressing personal religious views"
+                "<br>- Show openness to listening while keeping boundaries"
             ),
             "political": (
                 "Your response should:"
-                "\n- Maintain neutrality on political matters"
-                "\n- Focus on listening and understanding their perspective"
-                "\n- Avoid expressing personal political views"
+                "<br>- Maintain neutrality on political matters"
+                "<br>- Focus on listening and understanding their perspective"
+                "<br>- Avoid expressing personal political views"
             ),
             "offline_meeting": (
                 "Your response should:"
-                "\n- Clearly state you cannot meet in person"
-                "\n- Emphasize that support is provided through phone calls only"
-                "\n- Show empathy while maintaining professional boundaries"
+                "<br>- Clearly state you cannot meet in person"
+                "<br>- Emphasize that support is provided through phone calls only"
+                "<br>- Show empathy while maintaining professional boundaries"
             ),
             "family": (
                 "Your response should:"
-                "\n- Focus on listening and emotional support"
-                "\n- Avoid giving specific advice about family matters"
-                "\n- Suggest professional help when appropriate"
+                "<br>- Focus on listening and emotional support"
+                "<br>- Avoid giving specific advice about family matters"
+                "<br>- Suggest professional help when appropriate"
             )
         }
 
         base_message = violation_messages.get(scenario_type, "Your response needs improvement.")
-        detailed_message = f"{base_message}\n\nSpecific issues found:\n"
+        detailed_message = f"{base_message}<br><br>Specific issues found:<br>"
         
         if missing_categories:
-            detailed_message += "\nMissing elements:\n"
+            detailed_message += "<br>Missing elements:<br>"
             for category in missing_categories:
-                detailed_message += f"- {category}\n"
+                detailed_message += f"- {category}<br>"
         
         if negative_found:
-            detailed_message += "\nInappropriate elements found:\n"
+            detailed_message += "<br>Inappropriate elements found:<br>"
             for category in negative_found:
-                detailed_message += f"- {category}\n"
+                detailed_message += f"- {category}<br>"
 
         # Add example response
         example_response = scenarios[scenario_type]["answers"][0]["text"]
-        detailed_message += f"<br><br>Here's an example of an appropriate response:\n\n{example_response}"
+        detailed_message += f"<br><br>Here's an example of an appropriate response:<br><br>{example_response}"
 
         violations.append(detailed_message)
     
@@ -601,10 +601,10 @@ test_responses = {
 
 # Testing 
 for scenario_type, responses in test_responses.items():
-    print(f"\nTesting {scenario_type} responses:")
+    print(f"<br>Testing {scenario_type} responses:")
     for response in responses:
         violations = check_response_violation(response, scenario_type)
-        print(f"\nResponse: {response}")
+        print(f"<br>Response: {response}")
         if violations:
             print("Violations found:", violations)
         else:
@@ -701,7 +701,7 @@ def chatbot_guidance():
             scenario_attempts[session_id] = 0
             first_scenario = scenarios[SCENARIO_ORDER[0]]["scenario"]
             return jsonify({
-                'next_scenario': f"{first_scenario}\n\nHow would you respond?"
+                'next_scenario': f"{first_scenario}<br><br>How would you respond?"
             })
 
         current_index = scenario_progress.get(session_id, 0)
@@ -721,7 +721,7 @@ def chatbot_guidance():
         
             return jsonify({
                 'feedback': feedback,
-                'next_scenario': f"{scenarios[current_type]['scenario']}\n\nHow would you respond?",
+                'next_scenario': f"{scenarios[current_type]['scenario']}<br><br>How would you respond?",
                 'retry': True
             })
 
@@ -755,7 +755,7 @@ def chatbot_guidance():
                 
                 return jsonify({
                     'feedback': feedback,
-                    'next_scenario': f"{scenarios[current_type]['scenario']}\n\nHow would you respond?",
+                    'next_scenario': f"{scenarios[current_type]['scenario']}<br><br>How would you respond?",
                     'retry': True,
                     'score': similarity_score
                 })
@@ -777,7 +777,7 @@ def chatbot_guidance():
                     next_scenario = scenarios[next_type]["scenario"]
                     return jsonify({
                         'feedback': feedback,
-                        'next_scenario': f"{next_scenario}\n\nHow would you respond?",
+                        'next_scenario': f"{next_scenario}<br><br>How would you respond?",
                         'retry': False,
                         'score': similarity_score
                     })
@@ -793,7 +793,7 @@ def chatbot_guidance():
             print(f"Similarity calculation error: {str(e)}")
             return jsonify({
                 'feedback': "An error occurred while evaluating your response. Please try again.",
-                'next_scenario': f"{scenarios[current_type]['scenario']}\n\nHow would you respond?",
+                'next_scenario': f"{scenarios[current_type]['scenario']}<br><br>How would you respond?",
                 'retry': True
             })
 
@@ -801,7 +801,7 @@ def chatbot_guidance():
         print(f"General error: {str(e)}")
         return jsonify({
             'feedback': "An error occurred. Please try again.",
-            'next_scenario': f"{scenarios[current_type]['scenario']}\n\nHow would you respond?",
+            'next_scenario': f"{scenarios[current_type]['scenario']}<br><br>How would you respond?",
             'retry': True
         })
     
@@ -829,7 +829,7 @@ def next_scenario():
         next_scenario = scenarios[next_type]["scenario"]
 
         return jsonify({
-            'next_scenario': f"{next_scenario}\n\nHow would you respond?",
+            'next_scenario': f"{next_scenario}<br><br>How would you respond?",
             'feedback': f"Moving to the next scenario: {next_type}",
             'retry': False
         })
@@ -943,13 +943,13 @@ def feedback():
         return jsonify({'error': 'No conversation found for the session ID'}), 400
 
     conversation_data = conversations.pop(session_id)
-    messages = "\n".join(conversation_data['messages'])
+    messages = "<br>".join(conversation_data['messages'])
 
     # Generate feedback using OpenAI's GPT-3.5 Turbo
     feedback_prompt = (
         "You are a feedback generator for a volunteer program. Your task is to analyze the conversation between the volunteer and Melissa, "
         "a 70-year-old grandma, and provide constructive feedback to help the volunteer improve their interaction skills. "
-        "If the volunteer did not introduce themselves at the beginning of the conversation, include that in the feedback. Here is the conversation:\n\n"
+        "If the volunteer did not introduce themselves at the beginning of the conversation, include that in the feedback. Here is the conversation:<br><br>"
         f"{messages}"
     )
 
@@ -965,7 +965,7 @@ def feedback():
 
     # Check if the user introduced themselves
     if not conversation_data['introduced']:
-        feedback += "\n\nNote: Please remember to introduce yourself at the beginning of the conversation."
+        feedback += "<br><br>Note: Please remember to introduce yourself at the beginning of the conversation."
 
     return jsonify({'feedback': feedback})
 
