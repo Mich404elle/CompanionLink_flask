@@ -3,14 +3,233 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CompanionLink Chatbot</title>
+    <title>CompanionLink</title>
+    <link href="https://fonts.googleapis.com/css2?family=Helvetica+Neue:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-black: #000000;
+            --primary-red: #FF0000;
+            --background: #FFFFFF;
+            --grid-color: #E5E5E5;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        body {
+            background: var(--background);
+            min-height: 100vh;
+            padding: 2rem;
+            position: relative;
+        }
+
+        /* Grid Background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
+                linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
+            background-size: 24px 24px;
+            z-index: -1;
+            opacity: 0.4;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .header {
+            margin-bottom: 4rem;
+            border-bottom: 2px solid var(--primary-black);
+            padding-bottom: 2rem;
+        }
+
+        .logo {
+            font-size: 4rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: -2px;
+            line-height: 1;
+            margin-bottom: 1rem;
+        }
+
+        .tagline {
+            font-size: 1.25rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: var(--primary-red);
+        }
+
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2rem;
+            margin-top: 4rem;
+        }
+
+        .menu-item {
+            background: var(--background);
+            border: 2px solid var(--primary-black);
+            padding: 2rem;
+            text-decoration: none;
+            color: inherit;
+            transition: background 0.2s;
+            position: relative;
+        }
+
+        .menu-item:hover {
+            background: var(--primary-black);
+            color: var(--background);
+        }
+
+        .menu-item:hover .menu-title,
+        .menu-item:hover .menu-description {
+            color: var(--background);
+        }
+
+        .menu-number {
+            position: absolute;
+            top: -1rem;
+            right: -1rem;
+            background: var(--primary-red);
+            color: var(--background);
+            width: 2rem;
+            height: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+        }
+
+        .menu-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+            letter-spacing: -0.5px;
+        }
+
+        .menu-description {
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 1rem;
+            background: var(--primary-black);
+            color: var(--background);
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.875rem;
+        }
+
+        @media (max-width: 768px) {
+            .menu-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .logo {
+                font-size: 3rem;
+            }
+
+            .container {
+                padding: 1rem;
+            }
+        }
+
+        /* Swiss Style Navigation Lines */
+        .navigation-line {
+            position: fixed;
+            background: var(--primary-black);
+        }
+
+        .navigation-line-top {
+            top: 24px;
+            left: 24px;
+            width: calc(100% - 48px);
+            height: 2px;
+        }
+
+        .navigation-line-left {
+            top: 24px;
+            left: 24px;
+            width: 2px;
+            height: calc(100% - 48px);
+        }
+    </style>
 </head>
 <body>
-    <h1>Welcome to CompanionLink Chatbot</h1>
-    <ul>
-        <li><a href="/guidance">Training Guidance</a></li>
-        <li><a href="/chat">Chat with Senior</a></li>
-        <li><a href="/chat_guidance">Start Guidance Review Chat</a>
-    </ul>
+    <div class="navigation-line navigation-line-top"></div>
+    <div class="navigation-line navigation-line-left"></div>
+
+    <div class="container">
+        <header class="header">
+            <h1 class="logo">CompanionLink</h1>
+            <p class="tagline">Connecting Hearts, Bridging Generations</p>
+        </header>
+
+        <main class="menu-grid">
+            <a href="/guidance" class="menu-item">
+                <div class="menu-number">1</div>
+                <h2 class="menu-title">Training Guide</h2>
+                <p class="menu-description">Learn best practices and guidelines for being an effective companion.</p>
+            </a>
+
+            <a href="/chat_guidance" class="menu-item">
+                <div class="menu-number">2</div>
+                <h2 class="menu-title">Practice Chat</h2>
+                <p class="menu-description">Practice your communication skills with guided scenarios and feedback.</p>
+            </a>
+
+            <a href="/chat" class="menu-item">
+                <div class="menu-number">3</div>
+                <h2 class="menu-title">Chat with Senior</h2>
+                <p class="menu-description">Connect with your senior companion and start making a difference.</p>
+            </a>
+        </main>
+    </div>
+
+    <footer>
+        <p>© 2024 CompanionLink</p>
+    </footer>
+
+    <script>
+        document.querySelectorAll('a[href^="/"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                const href = this.getAttribute('href');
+                if (href !== window.location.pathname) {
+                    e.preventDefault();
+                    document.body.style.opacity = '0';
+                    setTimeout(() => {
+                        window.location.href = href;
+                    }, 200);
+                }
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', function() {
+            document.body.style.opacity = '0';
+            requestAnimationFrame(() => {
+                document.body.style.transition = 'opacity 0.3s ease';
+                document.body.style.opacity = '1';
+            });
+        });
+    </script>
 </body>
 </html>

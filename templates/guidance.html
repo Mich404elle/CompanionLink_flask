@@ -3,64 +3,235 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Training Guidance</title>
+    <title>Training Guidance | CompanionLink</title>
+    <link href="https://fonts.googleapis.com/css2?family=Helvetica+Neue:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: Arial, sans-serif; }
-        h1 { text-align: center; }
-        ul { margin: 20px; padding: 20px; list-style-type: none; }
-        li { margin-bottom: 10px; }
-        .section-title { font-weight: bold; font-size: 1.2em; margin-top: 20px; }
-        a { display: block; margin: 20px auto; text-align: center; text-decoration: none; color: #0066cc; }
-        a:hover { text-decoration: underline; }
+        :root {
+            --primary-black: #000000;
+            --primary-red: #FF0000;
+            --background: #FFFFFF;
+            --grid-color: #E5E5E5;
+            --spacing: 2rem;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        body {
+            background: var(--background);
+            min-height: 100vh;
+            padding: var(--spacing);
+            position: relative;
+            line-height: 1.6;
+        }
+
+        /* Grid Background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
+                linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
+            background-size: 24px 24px;
+            z-index: -1;
+            opacity: 0.4;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing);
+        }
+
+        header {
+            margin-bottom: calc(var(--spacing) * 2);
+            border-bottom: 2px solid var(--primary-black);
+            padding-bottom: var(--spacing);
+        }
+
+        h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: -1px;
+        }
+
+        .section {
+            margin-bottom: calc(var(--spacing) * 2);
+            border-left: 2px solid var(--primary-black);
+            padding-left: var(--spacing);
+        }
+
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: var(--spacing);
+            color: var(--primary-red);
+            letter-spacing: 1px;
+        }
+
+        .guidelines-list {
+            list-style: none;
+        }
+
+        .guideline-item {
+            margin-bottom: calc(var(--spacing) / 2);
+            padding-left: calc(var(--spacing) * 1.5);
+            position: relative;
+        }
+
+        .guideline-item::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 0.5rem;
+            width: var(--spacing);
+            height: 2px;
+            background: var(--primary-black);
+        }
+
+        .sub-list {
+            margin-top: calc(var(--spacing) / 2);
+            margin-left: var(--spacing);
+            list-style: none;
+        }
+
+        .sub-item {
+            margin-bottom: calc(var(--spacing) / 4);
+            position: relative;
+        }
+
+        .sub-item::before {
+            content: '—';
+            position: absolute;
+            left: -1.5rem;
+            color: var(--primary-red);
+        }
+
+        .back-button {
+            position: fixed;
+            bottom: var(--spacing);
+            right: var(--spacing);
+            background: var(--primary-black);
+            color: var(--background);
+            text-decoration: none;
+            padding: 1rem 2rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 1px;
+            transition: background 0.2s;
+        }
+
+        .back-button:hover {
+            background: var(--primary-red);
+        }
+
+        /* Navigation Lines */
+        .navigation-line {
+            position: fixed;
+            background: var(--primary-black);
+        }
+
+        .navigation-line-top {
+            top: 24px;
+            left: 24px;
+            width: calc(100% - 48px);
+            height: 2px;
+        }
+
+        .navigation-line-left {
+            top: 24px;
+            left: 24px;
+            width: 2px;
+            height: calc(100% - 48px);
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: calc(var(--spacing) / 2);
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .section {
+                margin-left: 0;
+                padding-left: calc(var(--spacing) / 2);
+            }
+        }
     </style>
 </head>
 <body>
-    <h1>Training Guidance</h1>
-    <ul>
-        <li class="section-title">General Guidelines</li>
-        <ul>
-            <li>1. The goal of the Companion Call program is to socialize and build meaningful friendships.</li>
-            <li>2. Throughout your time with CompanionLink, adhere to your volunteer rights and responsibilities and act within the limits of your volunteer role.</li>
-            <li>3. Do not give advice or meet your companion in person.</li>
-            <li>4. If you are uncertain about what to do, reach out to CompanionLink's Volunteer Coordinator for guidance.</li>
-            <li>5. Keep copies of the Volunteer Handbook & Agreements and review them as often as you need to.</li>
-            <li>6. If a Breach of Confidentiality does occur, then contact your Supervisor immediately.</li>
-        </ul>
-        
-        <li class="section-title">Do’s</li>
-        <ul>
-            <li>Communicate effectively</li>
-            <ul>
-                <li>1. Introduce yourself each time.</li>
-                <li>2. Speak clearly and annunciate carefully.</li>
-                <li>3. Be patient. Listen as your companion speaks at their own pace.</li>
+    <div class="navigation-line navigation-line-top"></div>
+    <div class="navigation-line navigation-line-left"></div>
+
+    <div class="container">
+        <header>
+            <h1>Training Guidance</h1>
+        </header>
+
+        <section class="section">
+            <h2 class="section-title">General Guidelines</h2>
+            <ul class="guidelines-list">
+                <li class="guideline-item">The goal of the Companion Call program is to socialize and build meaningful friendships.</li>
+                <li class="guideline-item">Throughout your time with CompanionLink, adhere to your volunteer rights and responsibilities.</li>
+                <li class="guideline-item">Do not give advice or meet your companion in person.</li>
+                <li class="guideline-item">If uncertain, reach out to CompanionLink's Volunteer Coordinator.</li>
+                <li class="guideline-item">Keep copies of the Volunteer Handbook & Agreements for reference.</li>
+                <li class="guideline-item">Report any Breach of Confidentiality to your Supervisor immediately.</li>
             </ul>
-            <li>Accommodate as necessary</li>
-            <ul>
-                <li>1. Check or ask if your companion uses assistance devices.</li>
-                <li>2. Connect via video calls where possible to leverage non-verbal communication such as facial expressions, hand gestures and lip movements.</li>
-                <li>3. Write or type on a whiteboard using ultra-large font.</li>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">Communication Standards</h2>
+            <ul class="guidelines-list">
+                <li class="guideline-item">
+                    Effective Communication
+                    <ul class="sub-list">
+                        <li class="sub-item">Introduce yourself each time</li>
+                        <li class="sub-item">Speak clearly and annunciate carefully</li>
+                        <li class="sub-item">Be patient and listen actively</li>
+                    </ul>
+                </li>
+                <li class="guideline-item">
+                    Accommodation Practices
+                    <ul class="sub-list">
+                        <li class="sub-item">Check for assistance devices</li>
+                        <li class="sub-item">Use video calls when possible</li>
+                        <li class="sub-item">Utilize large font when typing</li>
+                    </ul>
+                </li>
+                <li class="guideline-item">
+                    Creating Positive Atmosphere
+                    <ul class="sub-list">
+                        <li class="sub-item">Maintain friendly tone</li>
+                        <li class="sub-item">Stay flexible and engaging</li>
+                        <li class="sub-item">End calls positively</li>
+                    </ul>
+                </li>
             </ul>
-            <li>Foster a positive, friendly atmosphere</li>
-            <ul>
-                <li>1. Be kind, smile, and use friendly tone of voice.</li>
-                <li>2. Go with the flow and have fun!</li>
-                <li>3. Always end the call with, "Talk to you next week!"</li>
+        </section>
+
+        <section class="section">
+            <h2 class="section-title">Prohibited Actions</h2>
+            <ul class="guidelines-list">
+                <li class="guideline-item">Never interrupt or correct your companion</li>
+                <li class="guideline-item">Avoid impatient or raised voices</li>
+                <li class="guideline-item">Do not use patronizing speech (Elderspeak)</li>
             </ul>
-        </ul>
-        
-        <li class="section-title">Don’ts</li>
-        <ul>
-            <li>You should not:</li>
-            <ul>
-                <li>1. Interrupt or correct your companion.</li>
-                <li>2. Yell or use an impatient tone of voice.</li>
-                <li>3. Use Elderspeak (a patronizing style of speech that conveys incompetence, dependence, and control, with the effect of infantilizing the older adult).</li>
-            </ul>
-        </ul>
-    </ul>
-    <a href="/">Back to Home</a>
+        </section>
+    </div>
+
+    <a href="/" class="back-button">Back to Home</a>
 </body>
 </html>
-
-

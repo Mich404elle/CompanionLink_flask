@@ -3,67 +3,462 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat with Guidance Bot</title>
+    <title>Practice Scenarios | CompanionLink</title>
+    <link href="https://fonts.googleapis.com/css2?family=Helvetica+Neue:wght@400;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: Arial, sans-serif; }
-        #chat-box { width: 50%; margin: auto; }
-        .message { margin: 10px 0; }
-        .bot { color: blue; }
-        .user { color: green; }
-        .warning { color: red; margin-top: 20px; }
-        .info-box { background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
-        .info-box h2 { margin-top: 0; }
-        #feedback { margin-top: 20px; display: none; }
-        /* Add some spacing at the bottom */
-        #chat-box, #feedback {
-            margin-bottom: 20px;
+        :root {
+            --primary-black: #000000;
+            --primary-red: #FF0000;
+            --background: #FFFFFF;
+            --grid-color: #E5E5E5;
+            --spacing: 2rem;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        body {
+            background: var(--background);
+            min-height: 100vh;
+            position: relative;
+            padding: var(--spacing);
+        }
+
+        /* Grid Background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
+                linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
+            background-size: 24px 24px;
+            z-index: -1;
+            opacity: 0.4;
+        }
+
+        .container {
+            max-width: 90vw;
+            margin: 0 auto;
+            padding: var(--spacing);
+        }
+
+        #initial-message {
+            border: 2px solid var(--primary-black);
+            padding: calc(var(--spacing) * 2);
+            margin: calc(var(--spacing) * 2) auto;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        h1, h2 {
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: -1px;
+            margin-bottom: var(--spacing);
+        }
+
+        #chat-box {
+            display: none;
+            border: 2px solid var(--primary-black);
+            padding: var(--spacing);
+            margin-top: var(--spacing);
+            height: 85vh;
+            flex-direction: column;}
+
+        #messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: var(--spacing);
+            border-left: 2px solid var(--primary-black);
+            margin-bottom: 0.5rem;
+        }
+
+        .message {
+            margin: 1.75rem 0 0.75rem 0;
+            padding: 0.75rem;
+            font-size: 0.9rem;
+            position: relative;
+        }
+
+        .user {
+            margin-left: 20%;
+            background: var(--primary-black);
+            color: var(--background);
+        }
+
+        .bot {
+            margin-right: 20%;
+            border: 2px solid var(--primary-black);
+        }
+
+        .feedback {
+            border-left: 4px solid var(--primary-red);
+            margin: 0.75rem 0 0.75rem 0;
+            padding: 0.75rem;
+            position: relative;
+        }
+
+        .next-scenario {
+            border: 2px solid var(--primary-black);
+            margin: 1.75rem 0 0.75rem 0;
+            padding: 0.75rem;
+            background: var(--background);
+            font-size: 0.9rem;
+            position: relative;
+        }
+
+        .warning {
+            background: var(--primary-red);
+            color: var(--background);
+            padding: var(--spacing);
+            margin: var(--spacing) 0;
+            display: none;
+        }
+
+        .input-area {
+            border-top: 2px solid var(--primary-black);
+            padding-top: 0.75rem;
+        }
+
+        #message {
+            width: 100%;
+            padding: 0.75rem;
+            margin-bottom: 0.5rem;
+            border: 2px solid var(--primary-black);
+            resize: vertical;
+            min-height: 60px;
+            max-height: 150px;
+            font-size: 0.9rem;
+        }
+
+        .keyboard-hint {
+            color: var(--primary-black);
+            font-size: 0.7rem;
+            margin-bottom: 0.5rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        button {
+            background: var(--primary-black);
+            color: var(--background);
+            border: none;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            font-size: 0.85rem;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        button:hover {
+            background: var(--primary-red);
+        }
+
+        .navigation-line {
+            position: fixed;
+            background: var(--primary-black);
+        }
+
+        .navigation-line-top {
+            top: 24px;
+            left: 24px;
+            width: calc(100% - 48px);
+            height: 2px;
+        }
+
+        .navigation-line-left {
+            top: 24px;
+            left: 24px;
+            width: 2px;
+            height: calc(100% - 48px);
+        }
+
+        .timestamp {
+            position: absolute;
+            top: -1.25rem;
+            right: 0;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            background-color: var(--background); 
+            padding: 0 0.25rem; 
+            line-height: 1;  
+            z-index: 1;  
+            border-radius: 2px;  
+            white-space: nowrap; 
+        }
+
+        @keyframes bouncePoint {
+            0%, 100% {
+                transform: translateX(-5px);
+            }
+            50% {
+                transform: translateX(0);
+            }
+        }
+
+        .pointing-arrow {
+            position: absolute;
+            right: calc(100% + 10px);
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 24px;
+            animation: bouncePoint 1s infinite;
+            color: var(--primary-red);
+            pointer-events: none;
+        }
+
+        .button-container {
+    position: relative;
+    display: inline-block;
+        }
+
+        @media (max-width: 768px) {
+            .message {
+                margin: 2rem 0 0.75rem 0; 
+            }
+
+            .timestamp {
+                top: -1.5rem; 
+            }
+
+            .container {
+                padding: calc(var(--spacing) / 2);
+            }
+
+            h1, h2 {
+                font-size: 1.75rem;
+            }
+
+            .user, .bot {
+                margin-left: 0;
+                margin-right: 0;
+            }
+    
+            .button-group {
+                flex-direction: column;
+                width: 100%;
+            }
+
+            button {
+                width: 100%;
+            }
         }
     </style>
 </head>
 <body>
-    <div id="chat-box">
-        <h1>Chat with Guidance Bot</h1>
-        <div id="messages"></div>
-        <textarea id="message" placeholder="Type your message..."></textarea>
-        <button onclick="sendMessage()">Send</button>
-        <div id="warning" class="warning" style="display: none;"></div>
+    <div class="navigation-line navigation-line-top"></div>
+    <div class="navigation-line navigation-line-left"></div>
+
+    <div class="container">
+        <div id="initial-message">
+            <h2>Practice Scenarios</h2>
+            <p style="margin-bottom: var(--spacing)">We will review several scenarios that may occur during your companion conversations. Click start when ready.</p>
+            <button id="start-button" onclick="startChat()">Start Practice</button>
+        </div>
+
+        <div id="chat-box">
+            <div id="warning" class="warning"></div>
+            <h1>Training Scenarios</h1>
+            <div id="messages"></div>
+            <div class="input-area">
+                <textarea 
+                    id="message" 
+                    rows="4" 
+                    placeholder="Type your response..."
+                    onkeydown="handleKeyPress(event)"></textarea>
+                <div class="keyboard-hint">
+                    PRESS ENTER TO SEND, SHIFT+ENTER FOR NEW LINE
+                </div>
+                <div class="button-group">
+                    <button onclick="sendMessage()">Send Response</button>
+                    <button onclick="goToMainMenu()">Back to Main Menu</button>
+                    <button onclick="jumpToNextScenario()">Next Scenario</button>
+                </div>
+            </div>
+        </div>
     </div>
-    <div id="feedback">
-        <h2>Feedback</h2>
-        <p id="feedback-message"></p>
-    </div>
-    <!-- Back to Main Menu Button -->
-    <div style="text-align: center; margin-top: 20px;">
-        <button onclick="goToMainMenu()">Back to Main Menu</button>
-    </div>
+</body>
 
     <script>
         const sessionId = Date.now().toString();
+        let firstScenarioDisplayed = false;
+        let currentScenario = '';
 
-        async function sendMessage() {
-            const message = document.getElementById('message').value;
-            document.getElementById('messages').innerHTML += `<div class="message user">${message}</div>`;
-            document.getElementById('message').value = '';
-            const response = await fetch('/chatbot_guidance', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: message, session_id: sessionId })
-            });
-            const data = await response.json();
-            if (data.warning) {
-                document.getElementById('warning').innerText = data.warning;
-                document.getElementById('warning').style.display = 'block';
-            } else {
-                document.getElementById('warning').style.display = 'none';
-            }
-            if (data.response) {
-                document.getElementById('messages').innerHTML += `<div class="message bot">${data.response}</div>`;
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
             }
         }
 
-        // Function to navigate back to the main menu
+        function getTimeString() {
+            return new Date().toLocaleTimeString('en-US', { 
+                hour12: false, 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+        }
+
+        function startChat() {
+            document.getElementById('initial-message').style.display = 'none';
+            document.getElementById('chat-box').style.display = 'flex';
+    
+            // Create a container for the button and arrow
+            const buttonContainer = document.createElement('div');
+            buttonContainer.className = 'button-container';
+    
+            const arrow = document.createElement('span');
+            arrow.className = 'pointing-arrow';
+            arrow.innerHTML = '→';
+    
+            const okButton = document.createElement('button');
+            okButton.id = "ok-button";
+            okButton.innerHTML = "Begin Scenarios";
+            okButton.onclick = showFirstScenario;
+
+            // Append elements
+            buttonContainer.appendChild(arrow);
+            buttonContainer.appendChild(okButton);
+            document.getElementById('messages').appendChild(buttonContainer);
+            document.getElementById('message').focus();
+        }
+
+        function showFirstScenario() {
+            const buttonContainer = document.querySelector('.button-container');
+            if (buttonContainer) {
+                buttonContainer.remove();
+            } 
+
+            if (!firstScenarioDisplayed) {
+                sendMessage("start");
+                firstScenarioDisplayed = true;
+                currentScenario = "This is your first time calling your companion...";
+            }
+        }
+
+        function appendMessage(content, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.innerHTML = `
+                ${content}
+                <div class="timestamp">${getTimeString()}</div>
+            `;
+            document.getElementById('messages').appendChild(messageDiv);
+            messageDiv.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        async function sendMessage(message = null) {
+    try {
+        if (!message) {
+            message = document.getElementById('message').value.trim();
+            if (!message) return;
+            appendMessage(message, 'user');
+            document.getElementById('message').value = '';
+            document.getElementById('message').focus();
+        }
+
+        const response = await fetch('/chatbot_guidance', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ message, session_id: sessionId })
+        });
+
+        const data = await response.json();
+
+        if (data.feedback) {
+            const feedbackDiv = document.createElement('div');
+            feedbackDiv.className = 'message feedback';
+            feedbackDiv.innerHTML = `
+                ${data.feedback}
+                <div class="timestamp">${getTimeString()}</div>
+            `;
+            document.getElementById('messages').appendChild(feedbackDiv);
+        }
+
+        if (data.next_scenario && !data.next_scenario.includes(currentScenario)) {
+            const scenarioDiv = document.createElement('div');
+            scenarioDiv.className = 'message next-scenario';
+            scenarioDiv.innerHTML = `
+                <strong>Scenario:</strong><br>${data.next_scenario}
+                <div class="timestamp">${getTimeString()}</div>
+            `;
+            document.getElementById('messages').appendChild(scenarioDiv);
+            currentScenario = data.next_scenario;
+        }
+
+    } catch (error) {
+        const errorDiv = document.createElement('div');
+        errorDiv.className = 'message feedback';
+        errorDiv.innerHTML = `
+            <strong>Error:</strong><br>
+            An error occurred. Please try again.
+            <div class="timestamp">${getTimeString()}</div>
+        `;
+        document.getElementById('messages').appendChild(errorDiv);
+        console.error('Error details:', error);
+    }
+}
+
         function goToMainMenu() {
             window.location.href = '/';
+        }
+
+        async function jumpToNextScenario() {
+            try {
+                const response = await fetch('/next_scenario', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: sessionId })
+                });
+
+                const data = await response.json();
+                if (data.next_scenario) {
+                    appendMessage(`<strong>Scenario:</strong><br>${data.next_scenario}`, 'next-scenario');
+                    currentScenario = data.next_scenario;
+                }
+
+            } catch (error) {
+                appendMessage("<strong>Error:</strong><br>Unable to load the next scenario.", 'feedback');
+                console.error('Error details:', error);
+            }
+        }
+
+        function appendMessage(content, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.innerHTML = `
+                ${content}
+                <div class="timestamp">${getTimeString()}</div>
+            `;
+            document.getElementById('messages').appendChild(messageDiv);
+            messageDiv.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        function goToMainMenu() {
+            window.location.href = '/';
+        }
+
+        function getTimeString() {
+            return new Date().toLocaleTimeString('en-US', { 
+                hour12: false, 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
         }
     </script>
 </body>

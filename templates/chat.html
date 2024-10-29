@@ -3,79 +3,379 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Chat with Melissa</title>
+    <title>Chat with Melissa | CompanionLink</title>
+    <link href="https://fonts.googleapis.com/css2?family=Helvetica+Neue:wght@400;500;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: Arial, sans-serif; }
-        #chat-box { width: 50%; margin: auto; }
-        .message { margin: 10px 0; }
-        .bot { color: blue; }
-        .user { color: green; }
-        .warning { color: red; margin-top: 20px; }
-        .info-box { background-color: #f9f9f9; padding: 15px; border-radius: 5px; margin-bottom: 20px; }
-        .info-box h2 { margin-top: 0; }
-        #feedback { margin-top: 20px; display: none; }
+        :root {
+            --primary-black: #000000;
+            --primary-red: #FF0000;
+            --background: #FFFFFF;
+            --grid-color: #E5E5E5;
+            --spacing: 1.5rem;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        body {
+            background: var(--background);
+            min-height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Grid Background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
+                linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
+            background-size: 24px 24px;
+            z-index: -1;
+            opacity: 0.4;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 0;
+            height: 100vh;
+            max-width: 1600px;
+            margin: 0 auto;
+            overflow: hidden; /* Add this */
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: var(--background);
+            border-right: 2px solid var(--primary-black);
+            padding: var(--spacing);
+            overflow-y: auto;
+        }
+
+        .profile-header {
+            margin-bottom: calc(var(--spacing) * 2);
+        }
+
+        .profile-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: -1px;
+            line-height: 1;
+            margin-bottom: var(--spacing);
+        }
+
+        .info-section {
+            display: grid;
+            gap: var(--spacing);
+        }
+
+        .info-item {
+            border-bottom: 1px solid var(--primary-black);
+            padding-bottom: var(--spacing);
+        }
+
+        .info-label {
+            text-transform: uppercase;
+            font-size: 0.875rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .info-value {
+            font-size: 1rem;
+            line-height: 1.5;
+        }
+
+        /* Chat Area */
+        .chat-area {
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            background: var(--background);
+            position: relative;
+            max-height: 100vh; /* Add this */
+            overflow: hidden; /* Add this */
+        }
+
+
+        .chat-header {
+            padding: var(--spacing);
+            border-bottom: 2px solid var(--primary-black);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title {
+            font-size: 1.5rem;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .messages-container {
+            padding: var(--spacing);
+            overflow-y: auto; /* This was already there */
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing);
+            height: 100%; /* Add this */
+            max-height: calc(100vh - 160px); /* Add this - adjust the 160px based on your header and input area height */
+        }
+
+        .message {
+            max-width: 70%;
+            padding: 1rem;
+            position: relative;
+            line-height: 1.5;
+            word-wrap: break-word; /* Add this to handle long words */
+        }
+
+        .user {
+            margin-left: auto;
+            background: var(--primary-black);
+            color: var(--background);
+        }
+
+        .bot {
+            margin-right: auto;
+            border: 2px solid var(--primary-black);
+        }
+
+        .input-area {
+            border-top: 2px solid var(--primary-black);
+            padding: var(--spacing);
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: var(--spacing);
+        }
+
+        textarea {
+            border: 2px solid var(--primary-black);
+            padding: 0.75rem;
+            font-size: 1rem;
+            resize: none;
+            min-height: 45px;
+        }
+
+        button {
+            background: var(--primary-black);
+            color: var(--background);
+            border: none;
+            padding: 0 2rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: var(--primary-red);
+        }
+
+        .warning {
+            position: absolute;
+            bottom: 100px;
+            left: var(--spacing);
+            right: var(--spacing);
+            background: var(--primary-red);
+            color: var(--background);
+            padding: 1rem;
+            display: none;
+        }
+
+        #feedback {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--background);
+            padding: calc(var(--spacing) * 2);
+            border: 2px solid var(--primary-black);
+            text-align: center;
+            display: none;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                display: none;
+            }
+
+            .chat-area {
+                height: 100vh;
+            }
+        }
+
+        /* Swiss Style Typography */
+        h1, h2, h3 {
+            text-transform: uppercase;
+            letter-spacing: -0.5px;
+        }
+
+        .timestamp {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: #666;
+            margin-top: 0.25rem;
+        }
+
+        /* Grid Lines */
+        .chat-area::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 24px;
+            height: 100%;
+            width: 1px;
+            background: var(--grid-color);
+            z-index: -1;
+        }
     </style>
 </head>
 <body>
-    <div id="chat-box">
-        <h1>Chat with Melissa</h1>
-        <div class="info-box">
-            <h2>About Melissa</h2>
-            <p><strong>Name:</strong> Melissa</p>
-            <p><strong>Age:</strong> 70</p>
-            <p><strong>Location:</strong> Cozy suburban home near Toronto</p>
-            <p><strong>Family:</strong> Two sons who work abroad and rarely visit due to their busy schedules. Melissa also has grandchildren who she mentions occasionally.</p>
-            <p><strong>Hobbies:</strong> Gardening, cooking and baking, knitting, reading novels, and watching TV shows and movies.</p>
-        </div>
-        <div id="messages"></div>
-        <textarea id="message" placeholder="Type your message..."></textarea>
-        <button onclick="sendMessage()">Send</button>
-        <button onclick="endChat()">End Chat</button>
-        <div id="warning" class="warning" style="display: none;"></div>
+    <div class="container">
+        <aside class="sidebar">
+            <div class="profile-header">
+                <h1 class="profile-title">Melissa</h1>
+            </div>
+
+            <div class="info-section">
+                <div class="info-item">
+                    <div class="info-label">Age</div>
+                    <div class="info-value">70</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Location</div>
+                    <div class="info-value">Toronto Suburb</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Family</div>
+                    <div class="info-value">Two sons abroad, has grandchildren</div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Interests</div>
+                    <div class="info-value">Gardening / Cooking / Reading / Television</div>
+                </div>
+            </div>
+        </aside>
+
+        <main class="chat-area">
+            <header class="chat-header">
+                <h2 class="header-title">Chat Session</h2>
+                <button onclick="endChat()">End Chat</button>
+            </header>
+
+            <div class="messages-container" id="messages"></div>
+
+            <div id="warning" class="warning"></div>
+
+            <div class="input-area">
+                <textarea 
+                    id="message" 
+                    placeholder="Type your message..." 
+                    onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(); }">
+                </textarea>
+                <button onclick="sendMessage()">Send</button>
+            </div>
+        </main>
     </div>
+
     <div id="feedback">
-        <h2>Feedback</h2>
+        <h2>Session Feedback</h2>
         <p id="feedback-message"></p>
-        <a href="/">Back to Home</a>
+        <button onclick="window.location.href='/'">Return</button>
     </div>
+
     <script>
         const sessionId = Date.now().toString();
+        const messagesContainer = document.getElementById('messages');
+
+        function getTimeString() {
+            return new Date().toLocaleTimeString('en-US', { 
+                hour12: false, 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+        }
 
         async function sendMessage() {
-            const message = document.getElementById('message').value;
-            document.getElementById('messages').innerHTML += `<div class="message user">${message}</div>`;
-            document.getElementById('message').value = '';
-            const response = await fetch('/chatbot', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ message: message, session_id: sessionId })
-            });
-            const data = await response.json();
-            if (data.warning) {
-                document.getElementById('warning').innerText = data.warning;
+            const messageInput = document.getElementById('message');
+            const message = messageInput.value.trim();
+            
+            if (!message) return;
+
+            appendMessage(message, 'user');
+            messageInput.value = '';
+
+            try {
+                const response = await fetch('/chatbot', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message, session_id: sessionId })
+                });
+
+                const data = await response.json();
+
+                if (data.warning) {
+                    document.getElementById('warning').innerText = data.warning;
+                    document.getElementById('warning').style.display = 'block';
+                } else {
+                    document.getElementById('warning').style.display = 'none';
+                }
+
+                if (data.response) {
+                    appendMessage(data.response, 'bot');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('warning').innerText = 'An error occurred.';
                 document.getElementById('warning').style.display = 'block';
-            } else {
-                document.getElementById('warning').style.display = 'none';
             }
-            if (data.response) {
-                document.getElementById('messages').innerHTML += `<div class="message bot">${data.response}</div>`;
-            }
+        }
+
+        function appendMessage(content, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.innerHTML = `
+                ${content}
+                <div class="timestamp">${getTimeString()}</div>
+            `;
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
         async function endChat() {
-            const response = await fetch('/feedback', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ session_id: sessionId })
-            });
-            const data = await response.json();
-            document.getElementById('feedback-message').innerText = data.feedback || 'No feedback available.';
-            document.getElementById('feedback').style.display = 'block';
-            document.getElementById('chat-box').style.display = 'none';
+            try {
+                const response = await fetch('/feedback', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ session_id: sessionId })
+                });
+
+                const data = await response.json();
+                document.getElementById('feedback-message').innerText = data.feedback || 'No feedback available.';
+                document.getElementById('feedback').style.display = 'block';
+                document.querySelector('.container').style.display = 'none';
+            } catch (error) {
+                console.error('Error:', error);
+            }
         }
+
+        document.getElementById('message').focus();
     </script>
 </body>
 </html>
-
-
-
