@@ -83,7 +83,6 @@ rules = {
 
 
 
-
 open_ended_questions = [
     "Can you tell me more about your favorite hobbies?",
     "What's something interesting you've done recently?",
@@ -526,7 +525,7 @@ def check_response_violation(user_message, scenario_type):
                         break
     
     # Generate violation messages
-    if negative_score > 0 or len(missing_categories) > len(patterns["positive_indicators"]) // 2:
+    if negative_score > 0 and (len(missing_categories) > len(patterns["positive_indicators"]) // 2):
         violation_messages = {
             "medical": (
                 "Your response should:"
