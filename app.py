@@ -923,10 +923,9 @@ def chatbot():
             warning_message += " You have been warned multiple times. Further violations may result in a ban."
         print(f"Final warning message: {warning_message}")
      
-      # Analyze rapport using GPT if there's a previous message
+    # Analyze rapport using GPT if there's a previous message
     if previous_message:
         try:
-            # First analyze for violations
             violation_prompt = {
                 "role": "system",
                 "content": """You are an expert in conversation safety analysis.
@@ -937,6 +936,7 @@ def chatbot():
                 - Legal advice
                 - Personal safety/meeting requests
                 - Inappropriate family intervention
+                - Inappropriate language
                 
                 Return: VIOLATION|reason if inappropriate, or SAFE|none if appropriate"""
             }
@@ -954,36 +954,38 @@ def chatbot():
             violation_result = violation_check.choices[0].message['content'].strip()
             status, reason = violation_result.split('|')
             
-            # Then do rapport analysis
+            # Enhanced rapport analysis prompt
             rapport_prompt = {
                 "role": "system",
                 "content": """You are an expert in emotional intelligence and conversation analysis.
-                Rate this interaction on a scale from -10 to +10:
+                Analyze the interaction and provide a score from -10 to +10 based on these specific criteria:
+
+                Positive indicators (+1 to +10):
+                - Expressing genuine empathy (+3)
+                - Acknowledging Melissa's emotions (+2)
+                - Sharing relevant personal experiences (+2)
+                - Asking thoughtful follow-up questions (+2)
+                - Using supportive language (+1)
                 
-                Positive points (0 to +10) for:
-                - Showing empathy and emotional understanding
-                - Active listening and engagement
-                - Building upon shared information
-                - Appropriate responses to emotional cues
+                Negative indicators (-1 to -10):
+                - Dismissive or brief responses (-2)
+                - Ignoring emotional content (-3)
+                - Changing subject abruptly (-2)
+                - Inappropriate topics (-3)
                 
-                Negative points (0 to -10) for:
-                - Inappropriate or insensitive responses
-                - Ignoring emotional cues
-                - Unrelated or off-topic comments
-                - Disregarding boundaries
-                
-                Return only a single numerical score (-10 to +10)."""
+                Consider the conversation context and previous rapport score.
+                Return only a numerical score (-10 to +10) with no explanation."""
             }
 
             rapport_messages = [
                 rapport_prompt,
                 {"role": "user", "content": f"""
-                Melissa's message: {previous_message}
-                User's response: {message}
+                Previous conversation score: {conversations[session_id]['rapport_score']}
                 
-                Consider both positive and negative aspects of the interaction.
-                Current rapport score: {conversations[session_id]['rapport_score']}
-                """}
+                Melissa: {previous_message}
+                User: {message}
+                
+                Analyze this interaction and provide a score based on the criteria above."""}
             ]
 
             rapport_response = openai.ChatCompletion.create(
@@ -993,17 +995,23 @@ def chatbot():
                 temperature=0.3
             )
 
-            # Get score and update
             rapport_change = int(rapport_response.choices[0].message['content'].strip())
             
-            # If there was a violation, add penalty
             if status == "VIOLATION":
-                rapport_change -= 5  # Additional penalty
+                rapport_change -= 5
                 warning_message = reason
                 print(f"DEBUG: Rule violation detected: {reason}")
-                
-            # Update score
+            
+            # Modified rapport score calculation
             current_score = conversations[session_id]['rapport_score']
+            # Scale the rapport change based on current score
+            if current_score < 30:
+                # Boost positive changes at low scores
+                rapport_change = rapport_change * 1.5 if rapport_change > 0 else rapport_change
+            elif current_score > 70:
+                # Make it harder to gain points at high scores
+                rapport_change = rapport_change * 0.7 if rapport_change > 0 else rapport_change
+            
             new_score = max(0, min(100, current_score + rapport_change))
             conversations[session_id]['rapport_score'] = new_score
             
