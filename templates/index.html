@@ -190,17 +190,17 @@
                 <h2 class="menu-title">Training Guide</h2>
                 <p class="menu-description">Learn best practices and guidelines for being an effective companion.</p>
             </a>
-
+        
             <a href="/chat_guidance" class="menu-item">
                 <div class="menu-number">2</div>
                 <h2 class="menu-title">Practice Chat</h2>
                 <p class="menu-description">Practice your communication skills with guided scenarios and feedback.</p>
             </a>
-
-            <a href="/chat" class="menu-item">
+        
+            <a href="/select" class="menu-item">
                 <div class="menu-number">3</div>
                 <h2 class="menu-title">Chat with Senior</h2>
-                <p class="menu-description">Connect with your senior companion and start making a difference.</p>
+                <p class="menu-description">Choose a senior companion and start making a difference.</p>
             </a>
         </main>
     </div>
@@ -213,16 +213,14 @@
         document.querySelectorAll('a[href^="/"]').forEach(anchor => {
             anchor.addEventListener('click', function (e) {
                 const href = this.getAttribute('href');
-                if (href !== window.location.pathname) {
-                    e.preventDefault();
-                    document.body.style.opacity = '0';
-                    setTimeout(() => {
-                        window.location.href = href;
-                    }, 200);
-                }
+                e.preventDefault();
+                document.body.style.opacity = '0';
+                setTimeout(() => {
+                    window.location.href = href;
+                }, 200);
             });
         });
-
+    
         document.addEventListener('DOMContentLoaded', function() {
             document.body.style.opacity = '0';
             requestAnimationFrame(() => {
