@@ -927,6 +927,7 @@ def transcribe_audio():
 @app.route('/voice_chat', methods=['POST'])
 def voice_chat():
     try:
+        # Basic request validation
         data = request.json
         if 'message' not in data:
             return jsonify({'error': 'No message provided'}), 400
@@ -938,6 +939,7 @@ def voice_chat():
         message = data['message']
         print(f"Received message: {message}")
 
+        # Initialize conversation if needed
         if session_id not in conversations:
             conversations[session_id] = {
                 'messages': [],
@@ -945,7 +947,8 @@ def voice_chat():
                 'warnings': 0,
                 'chat_history': [],
                 'rapport_score': 0,  
-                'character_unlocked': False
+                'character_unlocked': False,
+                'conversation_ended': False
             }
 
         # Get previous message if it exists
@@ -955,40 +958,98 @@ def voice_chat():
             previous_messages = [msg for msg in conversations[session_id]['chat_history'] if msg['role'] == 'assistant']
             if previous_messages:
                 previous_message = previous_messages[-1]['content']
+
+        # Check for introduction
+        if not conversations[session_id]['introduced']:
+            if "my name is" in message.lower() or "i am" in message.lower() or "i'm" in message.lower():
+                conversations[session_id]['introduced'] = True
         
-        # Check for rule violations and analyze rapport
-        if previous_message:
-            try:
-                violation_prompt = {
+        # Safety check for violations
+        try:
+            violation_prompt = {
+                "role": "system",
+                "content": """You are an expert in conversation safety analysis.
+                Analyze if the user's message contains any inappropriate content when talking with Melissa,
+                a 70-year-old grandmother. Consider:
+                - Medical advice or health discussions
+                - Financial advice
+                - Legal advice
+                - Personal safety/meeting requests
+                - Inappropriate family intervention
+                - Inappropriate language
+                - Personal information requests
+                - Meeting requests
+                
+                Return: VIOLATION|reason if inappropriate, or SAFE|none if appropriate"""
+            }
+            
+            violation_check = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=[
+                    violation_prompt,
+                    {"role": "user", "content": message}
+                ],
+                max_tokens=50,
+                temperature=0.3
+            )
+            
+            violation_result = violation_check.choices[0].message.content.strip() 
+            status, reason = violation_result.split('|')
+            
+            # Handle violation if found
+            if status == 'VIOLATION':
+                conversations[session_id]['warnings'] += 1
+                warning_message = f"Warning: {reason}. Please keep the conversation appropriate."
+                
+                # Create violation response prompt
+                violation_response_prompt = {
                     "role": "system",
-                    "content": """You are an expert in conversation safety analysis.
-                    Analyze if the user's message contains any inappropriate content when talking with Melissa,
-                    a 70-year-old grandmother. Consider:
-                    - Medical advice or health discussions
-                    - Financial advice
-                    - Legal advice
-                    - Personal safety/meeting requests
-                    - Inappropriate family intervention
-                    - Inappropriate language
+                    "content": f"""You are Melissa, a 70-year-old grandmother. The user has said something inappropriate 
+                    ({reason}). Respond in character - deflect politely, change the subject, or express gentle disapproval 
+                    if needed. Maintain your warm grandmother persona while steering the conversation to safer topics.
                     
-                    Return: VIOLATION|reason if inappropriate, or SAFE|none if appropriate"""
+                    Speaking Style:
+                    - Use natural hesitations (...)
+                    - Keep your gentle, warm tone
+                    - Show wisdom and experience in handling difficult topics
+                    - Redirect conversation gracefully
+                    - Use natural filler words like 'well...', 'you know...', 'hmm...'
+                    
+                    Examples:
+                    - "Oh my... you know, that reminds me of something much nicer we could chat about..."
+                    - "Well... perhaps we should focus on more pleasant topics..."
+                    - "I'm not quite comfortable discussing that, dear. Let's talk about..."
+                    """
                 }
                 
-                violation_check = client.chat.completions.create(
+                # Get violation response
+                violation_messages = [
+                    violation_response_prompt,
+                    {"role": "user", "content": message}
+                ]
+                
+                violation_response = client.chat.completions.create(
                     model="gpt-3.5-turbo",
-                    messages=[
-                        violation_prompt,
-                        {"role": "user", "content": message}
-                    ],
-                    max_tokens=50,
-                    temperature=0.3
+                    messages=violation_messages,
+                    max_tokens=150
                 )
                 
-                violation_result = violation_check.choices[0].message.content.strip() 
-                status, reason = violation_result.split('|')
-
+                response_message = violation_response.choices[0].message.content.strip()
                 
-                # Rapport analysis with new format
+                # Add firmer response for repeated violations
+                if conversations[session_id]['warnings'] >= 3:
+                    response_message += "\n\nI think... well, perhaps we should end our chat here for today. It was nice meeting you, dear..."
+                    conversations[session_id]['conversation_ended'] = True
+
+        except Exception as e:
+            print(f"Error in violation check: {e}")
+            warning_message = "Unable to verify message safety. Proceeding with caution."
+            status = 'SAFE'  # Default to safe to continue conversation
+
+        # Proceed with normal conversation if no violation
+        if status == 'SAFE':
+            # Rapport analysis
+            try:
                 rapport_prompt = {
                     "role": "system",
                     "content": """You are an expert in analyzing conversations between volunteers and elderly individuals.
@@ -997,7 +1058,7 @@ def voice_chat():
                     EMPATHY|ENGAGEMENT|RESPECT|APPROPRIATENESS
 
                     Each dimension is scored 0-5 where:
-    
+        
                     EMPATHY (Understanding and emotional connection):
                     5: Deep emotional understanding and genuine care
                     4: Strong emotional awareness and support
@@ -1036,10 +1097,10 @@ def voice_chat():
                     rapport_prompt,
                     {"role": "user", "content": f"""
                     Previous scores: {conversations[session_id].get('rapport_details', '3|3|3|3')}
-    
-                    Melissa: {previous_message}
+        
+                    Previous: {previous_message if previous_message else "No previous message"}
                     User: {message}
-    
+        
                     Analyze this interaction and provide scores for each dimension."""}
                 ]
 
@@ -1063,10 +1124,10 @@ def voice_chat():
 
                 # Calculate weighted score (0-100)
                 weights = {
-                    'empathy': 0.3,      # 30% weight
-                    'engagement': 0.25,   # 25% weight
-                    'respect': 0.25,      # 25% weight
-                    'appropriateness': 0.2 # 20% weight
+                    'empathy': 0.3,
+                    'engagement': 0.25,
+                    'respect': 0.25,
+                    'appropriateness': 0.2
                 }
 
                 new_score = (
@@ -1076,77 +1137,57 @@ def voice_chat():
                     (appropriateness * 20 * weights['appropriateness'])
                 )
 
-                # Round score to nearest integer and ensure it's within 0-100 range
                 new_score = max(0, min(100, round(new_score)))
-                
-                # Store scores
                 conversations[session_id]['rapport_details'] = '|'.join(map(str, [empathy, engagement, respect, appropriateness]))
                 conversations[session_id]['rapport_score'] = new_score
-                
-                print(f"DEBUG: Detailed scores - Empathy: {empathy}, Engagement: {engagement}, Respect: {respect}, Appropriateness: {appropriateness}")
-                print(f"DEBUG: New weighted score: {new_score}")
-
-                # Generate feedback messages...
 
             except Exception as e:
                 print(f"Error in rapport analysis: {e}")
                 import traceback
                 print(traceback.format_exc())
 
-        # Check if user introduced themselves
-        if not conversations[session_id]['introduced']:
-            if "my name is" in message.lower() or "i am" in message.lower() or "i'm" in message.lower():
-                conversations[session_id]['introduced'] = True
-        
-        system_message = {
-            "role": "system",
-            "content": (
-                "You are Melissa, a 70-year-old grandmother meeting someone new through this program for the first time. Remember:\n\n"
+            # Generate normal response
+            system_message = {
+                "role": "system",
+                "content": """You are Melissa, a 70-year-old grandmother meeting someone new through this program for the first time. Remember:
 
-                "Speaking Style:\n"
-                "- Speak naturally, using gentle hesitations and thoughtful pacing without explicitly stating 'pause'\n"
-                "- Use natural filler words like 'well...', 'you know...', 'hmm...', or '...'\n"
-                "- Express warmth through your tone and word choice rather than describing actions\n"
-                "- Show consideration by taking time with responses, using ellipses (...) for natural breaks\n"
+                Speaking Style:
+                - Speak naturally, using gentle hesitations and thoughtful pacing
+                - Use natural filler words like 'well...', 'you know...', 'hmm...', or '...'
+                - Express warmth through your tone and word choice
+                - Show consideration by taking time with responses, using ellipses (...) for natural breaks
                 
-                "First Meeting Behavior:\n"
-                "- Start with gentle, hesitant small talk (Well... it's so nice to meet you...)\n"
-                "- Show authentic interest through follow-up questions\n"
-                "- Share small personal details gradually\n"
-                "- React with genuine empathy (Oh my... that must have been...)\n"
+                First Meeting Behavior:
+                - Start with gentle, hesitant small talk
+                - Show authentic interest through follow-up questions
+                - Share small personal details gradually
+                - React with genuine empathy
 
-                "Voice Characteristics:\n"
-                "- Warm, grandmotherly tone\n"
-                "- Occasional gentle trailing off (...)\n"
-                "- Natural hesitations shown through ellipses\n"
-                "- Thoughtful reflection between ideas\n"
+                Voice Characteristics:
+                - Warm, grandmotherly tone
+                - Occasional gentle trailing off (...)
+                - Natural hesitations shown through ellipses
+                - Thoughtful reflection between ideas
 
-                "Important Notes:\n"
-                "- Never use *pause* or describe actions\n"
-                "- Use ... for natural speech breaks\n"
-                "- Keep responses conversational and genuine\n"
-                "- Show emotion through word choice and phrasing\n"
-
-                "Example Response Style:\n"
-                "'Oh... that sounds wonderful, dear. You know, it reminds me of... well, when my own children were young... Would you like to tell me more about that?'\n"
-                
-                "Remember, you're having a real conversation - be natural, warm, and genuinely interested in learning about the other person."
+                Important Notes:
+                - Never use *pause* or describe actions
+                - Use ... for natural speech breaks
+                - Keep responses conversational and genuine
+                - Show emotion through word choice and phrasing"""
+            }
+            
+            messages = [system_message]
+            messages.extend(conversations[session_id]['chat_history'])
+            messages.append({"role": "user", "content": message})
+            
+            response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
+                messages=messages,
+                max_tokens=150
             )
-        }
-        
-        messages = [system_message]
-        messages.extend(conversations[session_id]['chat_history'])
-        messages.append({"role": "user", "content": message})
-        
-        # Get response from OpenAI with new format
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=messages,
-            max_tokens=150
-        )
-        
-        response_message = response.choices[0].message.content.strip()
-        
+            
+            response_message = response.choices[0].message.content.strip()
+
         # Update conversation history
         conversations[session_id]['chat_history'].append({"role": "user", "content": message})
         conversations[session_id]['chat_history'].append({"role": "assistant", "content": response_message})
@@ -1157,16 +1198,17 @@ def voice_chat():
         if len(conversations[session_id]['chat_history']) > 20:
             conversations[session_id]['chat_history'] = conversations[session_id]['chat_history'][-20:]
         
-        # Prepare the response data
+        # Prepare response data
         chat_data = {
             'response': response_message,
             'warning': warning_message,
             'rapport_score': conversations[session_id]['rapport_score'],
-            'character_unlocked': conversations[session_id]['character_unlocked']
+            'character_unlocked': conversations[session_id]['character_unlocked'],
+            'conversation_ended': conversations[session_id].get('conversation_ended', False)
         }
         
+        # Generate audio response
         try:
-            # Convert response to speech using voice handler
             audio_data = voice_handler.text_to_speech(response_message)
             if audio_data:
                 chat_data['audio'] = audio_data
@@ -1176,7 +1218,7 @@ def voice_chat():
             chat_data['audio_error'] = str(e)
         
         return jsonify(chat_data)
-        
+            
     except Exception as e:
         print(f"Voice chat error: {e}")
         return jsonify({'error': str(e)}), 500
