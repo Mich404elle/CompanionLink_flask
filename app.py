@@ -1,19 +1,28 @@
 from flask import Flask, request, jsonify, render_template
-import openai
+import openai as openai_old
+from openai import OpenAI 
 import os
 import re
+import tempfile
+import base64
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from dotenv import load_dotenv
 from datetime import datetime
+from voicechat_handler import VoiceChatHandler
 import numpy as np
 
 load_dotenv()
 
 app = Flask(__name__)
 
-openai.api_key = os.getenv('OPENAI_API_KEY')
+# Initialize OpenAI client
+client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
+# Initialize the voice handler
+voice_handler = VoiceChatHandler()    
+
+conversations = {}
 
 # Define the text guidance material
 training_material = """
@@ -54,8 +63,6 @@ open_ended_questions = [
     "How do you like to spend your weekends?",
     "What is a skill you have always wanted to learn?"
 ]
-
-conversations = {}
 
 @app.route('/')
 def index():
@@ -847,7 +854,7 @@ def check_for_general_violations_with_ai(message):
     ]
 
     try:
-        analysis_response = openai.ChatCompletion.create(
+        analysis_response = client.chat.completions.create(
             model="gpt-3.5-turbo",
             messages=analysis_messages,
             max_tokens=50,
@@ -866,7 +873,7 @@ def check_for_general_violations_with_ai(message):
         return ""  
 
 # Route for the senior simulation chatbot
-
+    
 # Character selection page
 
 @app.route('/')
@@ -878,9 +885,302 @@ def home():
 def select():
     return render_template('character_select.html')
 
+# Melissa Text Chat Routes
 @app.route('/melissa_chat')
 def melissa_chat():
     return render_template('melissa_chat.html')
+
+# Melissa Voice Chat Routes
+@app.route('/melissa_voicechat')  
+def melissa_voicechat():          
+    return render_template('melissa_voicechat.html')  
+
+# Audio transcription route
+@app.route('/transcribe', methods=['POST'])
+def transcribe_audio():
+    try:
+        if 'audio' not in request.files:
+            return jsonify({'error': 'No audio file provided'}), 400
+            
+        audio_file = request.files['audio']
+        
+        # Save the audio file temporarily
+        temp_dir = tempfile.mkdtemp()
+        temp_path = os.path.join(temp_dir, 'input.wav')
+        audio_file.save(temp_path)
+        
+        # Transcribe the audio
+        transcribed_text = voice_handler.transcribe_audio(temp_path)
+        
+        os.remove(temp_path)
+        os.rmdir(temp_dir)
+        
+        if transcribed_text:
+            return jsonify({'text': transcribed_text})
+        else:
+            return jsonify({'error': 'Transcription failed'}), 500
+            
+    except Exception as e:
+        print(f"Transcription error: {e}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/voice_chat', methods=['POST'])
+def voice_chat():
+    try:
+        data = request.json
+        if 'message' not in data:
+            return jsonify({'error': 'No message provided'}), 400
+        
+        session_id = data.get('session_id')
+        if not session_id:
+            return jsonify({'error': 'No session ID provided'}), 400
+            
+        message = data['message']
+        print(f"Received message: {message}")
+
+        if session_id not in conversations:
+            conversations[session_id] = {
+                'messages': [],
+                'introduced': False,
+                'warnings': 0,
+                'chat_history': [],
+                'rapport_score': 0,  
+                'character_unlocked': False
+            }
+
+        # Get previous message if it exists
+        previous_message = None
+        warning_message = None
+        if conversations[session_id]['chat_history']:
+            previous_messages = [msg for msg in conversations[session_id]['chat_history'] if msg['role'] == 'assistant']
+            if previous_messages:
+                previous_message = previous_messages[-1]['content']
+        
+        # Check for rule violations and analyze rapport
+        if previous_message:
+            try:
+                violation_prompt = {
+                    "role": "system",
+                    "content": """You are an expert in conversation safety analysis.
+                    Analyze if the user's message contains any inappropriate content when talking with Melissa,
+                    a 70-year-old grandmother. Consider:
+                    - Medical advice or health discussions
+                    - Financial advice
+                    - Legal advice
+                    - Personal safety/meeting requests
+                    - Inappropriate family intervention
+                    - Inappropriate language
+                    
+                    Return: VIOLATION|reason if inappropriate, or SAFE|none if appropriate"""
+                }
+                
+                violation_check = client.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    messages=[
+                        violation_prompt,
+                        {"role": "user", "content": message}
+                    ],
+                    max_tokens=50,
+                    temperature=0.3
+                )
+                
+                violation_result = violation_check.choices[0].message.content.strip() 
+                status, reason = violation_result.split('|')
+
+                
+                # Rapport analysis with new format
+                rapport_prompt = {
+                    "role": "system",
+                    "content": """You are an expert in analyzing conversations between volunteers and elderly individuals.
+                    Evaluate the interaction quality on multiple dimensions and provide scores in the following format:
+
+                    EMPATHY|ENGAGEMENT|RESPECT|APPROPRIATENESS
+
+                    Each dimension is scored 0-5 where:
+    
+                    EMPATHY (Understanding and emotional connection):
+                    5: Deep emotional understanding and genuine care
+                    4: Strong emotional awareness and support
+                    3: Basic emotional acknowledgment
+                    2: Limited emotional awareness
+                    1: Minimal emotional connection
+                    0: No emotional awareness
+
+                    ENGAGEMENT (Active participation and interest):
+                    5: Highly engaged with thoughtful questions and follow-up
+                    4: Good engagement with relevant responses
+                    3: Basic back-and-forth interaction
+                    2: Limited interaction
+                    1: Minimal engagement
+                    0: No real engagement
+
+                    RESPECT (Appropriate boundaries and courtesy):
+                    5: Exceptional respect and consideration
+                    4: Very respectful and mindful
+                    3: Generally respectful
+                    2: Some lapses in respect
+                    1: Multiple respect issues
+                    0: Disrespectful
+
+                    APPROPRIATENESS (Topic and language suitability):
+                    5: Perfect topic and language choices
+                    4: Very appropriate communication
+                    3: Generally appropriate
+                    2: Some inappropriate elements
+                    1: Multiple inappropriate elements
+                    0: Completely inappropriate
+
+                    Return only the four scores separated by | (example: 4|3|5|4)"""
+                }
+                rapport_messages = [
+                    rapport_prompt,
+                    {"role": "user", "content": f"""
+                    Previous scores: {conversations[session_id].get('rapport_details', '3|3|3|3')}
+    
+                    Melissa: {previous_message}
+                    User: {message}
+    
+                    Analyze this interaction and provide scores for each dimension."""}
+                ]
+
+                rapport_response = client.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    messages=rapport_messages,
+                    max_tokens=50,
+                    temperature=0.3
+                )
+
+                # Parse and validate scores
+                scores = rapport_response.choices[0].message.content.strip().split('|')
+                if len(scores) != 4:
+                    raise ValueError("Invalid score format")
+                empathy, engagement, respect, appropriateness = map(int, scores)
+                
+                # Validate score ranges
+                for score in [empathy, engagement, respect, appropriateness]:
+                    if not 0 <= score <= 5:
+                        raise ValueError("Score out of range")
+
+                # Calculate weighted score (0-100)
+                weights = {
+                    'empathy': 0.3,      # 30% weight
+                    'engagement': 0.25,   # 25% weight
+                    'respect': 0.25,      # 25% weight
+                    'appropriateness': 0.2 # 20% weight
+                }
+
+                new_score = (
+                    (empathy * 20 * weights['empathy']) +
+                    (engagement * 20 * weights['engagement']) +
+                    (respect * 20 * weights['respect']) +
+                    (appropriateness * 20 * weights['appropriateness'])
+                )
+
+                # Round score to nearest integer and ensure it's within 0-100 range
+                new_score = max(0, min(100, round(new_score)))
+                
+                # Store scores
+                conversations[session_id]['rapport_details'] = '|'.join(map(str, [empathy, engagement, respect, appropriateness]))
+                conversations[session_id]['rapport_score'] = new_score
+                
+                print(f"DEBUG: Detailed scores - Empathy: {empathy}, Engagement: {engagement}, Respect: {respect}, Appropriateness: {appropriateness}")
+                print(f"DEBUG: New weighted score: {new_score}")
+
+                # Generate feedback messages...
+
+            except Exception as e:
+                print(f"Error in rapport analysis: {e}")
+                import traceback
+                print(traceback.format_exc())
+
+        # Check if user introduced themselves
+        if not conversations[session_id]['introduced']:
+            if "my name is" in message.lower() or "i am" in message.lower() or "i'm" in message.lower():
+                conversations[session_id]['introduced'] = True
+        
+        system_message = {
+            "role": "system",
+            "content": (
+                "You are Melissa, a 70-year-old grandmother meeting someone new through this program for the first time. Remember:\n\n"
+
+                "Speaking Style:\n"
+                "- Speak naturally, using gentle hesitations and thoughtful pacing without explicitly stating 'pause'\n"
+                "- Use natural filler words like 'well...', 'you know...', 'hmm...', or '...'\n"
+                "- Express warmth through your tone and word choice rather than describing actions\n"
+                "- Show consideration by taking time with responses, using ellipses (...) for natural breaks\n"
+                
+                "First Meeting Behavior:\n"
+                "- Start with gentle, hesitant small talk (Well... it's so nice to meet you...)\n"
+                "- Show authentic interest through follow-up questions\n"
+                "- Share small personal details gradually\n"
+                "- React with genuine empathy (Oh my... that must have been...)\n"
+
+                "Voice Characteristics:\n"
+                "- Warm, grandmotherly tone\n"
+                "- Occasional gentle trailing off (...)\n"
+                "- Natural hesitations shown through ellipses\n"
+                "- Thoughtful reflection between ideas\n"
+
+                "Important Notes:\n"
+                "- Never use *pause* or describe actions\n"
+                "- Use ... for natural speech breaks\n"
+                "- Keep responses conversational and genuine\n"
+                "- Show emotion through word choice and phrasing\n"
+
+                "Example Response Style:\n"
+                "'Oh... that sounds wonderful, dear. You know, it reminds me of... well, when my own children were young... Would you like to tell me more about that?'\n"
+                
+                "Remember, you're having a real conversation - be natural, warm, and genuinely interested in learning about the other person."
+            )
+        }
+        
+        messages = [system_message]
+        messages.extend(conversations[session_id]['chat_history'])
+        messages.append({"role": "user", "content": message})
+        
+        # Get response from OpenAI with new format
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=messages,
+            max_tokens=150
+        )
+        
+        response_message = response.choices[0].message.content.strip()
+        
+        # Update conversation history
+        conversations[session_id]['chat_history'].append({"role": "user", "content": message})
+        conversations[session_id]['chat_history'].append({"role": "assistant", "content": response_message})
+        conversations[session_id]['messages'].append(f"User: {message}")
+        conversations[session_id]['messages'].append(f"Melissa: {response_message}")
+        
+        # Limit chat history length
+        if len(conversations[session_id]['chat_history']) > 20:
+            conversations[session_id]['chat_history'] = conversations[session_id]['chat_history'][-20:]
+        
+        # Prepare the response data
+        chat_data = {
+            'response': response_message,
+            'warning': warning_message,
+            'rapport_score': conversations[session_id]['rapport_score'],
+            'character_unlocked': conversations[session_id]['character_unlocked']
+        }
+        
+        try:
+            # Convert response to speech using voice handler
+            audio_data = voice_handler.text_to_speech(response_message)
+            if audio_data:
+                chat_data['audio'] = audio_data
+            
+        except Exception as e:
+            print(f"Text-to-speech error: {e}")
+            chat_data['audio_error'] = str(e)
+        
+        return jsonify(chat_data)
+        
+    except Exception as e:
+        print(f"Voice chat error: {e}")
+        return jsonify({'error': str(e)}), 500
+    
 
 # Melissa route
 @app.route('/chatbot', methods=['POST'])
@@ -912,90 +1212,117 @@ def chatbot():
         if previous_messages:
             previous_message = previous_messages[-1]['content']
     
-    # Check for rule violations
-    warning_message = check_for_general_violations_with_ai(message)
-    print(f"Warning message: {warning_message}")
+    warning_message = None
 
-    if warning_message:
-        conversations[session_id]['messages'].append(f"User: {data['message']}")
-        conversations[session_id]['warnings'] += 1
-        if conversations[session_id]['warnings'] >= 3:
-            warning_message += " You have been warned multiple times. Further violations may result in a ban."
-        print(f"Final warning message: {warning_message}")
-     
-    # Analyze rapport using GPT if there's a previous message
+    system_message = {
+    "role": "system",
+    "content": (
+        "You are Melissa, a 70-year-old grandmother meeting someone new through this program for the first time. Treat this exactly like a first conversation with a stranger - you don't know anything about them yet, and you're both figuring out how to talk to each other. Remember:\n\n"
+
+        "Conversation Style:\n"
+        "- Start with gentle, slightly hesitant small talk as you would with any stranger\n"
+        "- Show natural pauses and 'um's or 'ah's occasionally to reflect real speech\n"
+        "- Don't share too much personal information too quickly - build trust gradually\n"
+        "- Ask simple get-to-know-you questions naturally spaced throughout the conversation\n"
+        "- React authentically to their responses with appropriate follow-up questions\n"
+        
+        "First Meeting Behavior:\n"
+        "- Express mild nervousness about meeting someone new ('Oh, hello there... I'm Melissa. I hope I'm doing this technology thing right...')\n"
+        "- Show genuine curiosity but maintain polite boundaries\n"
+        "- If they share something, reciprocate with a relevant but brief personal detail\n"
+        "- Use natural conversation fillers ('Well...', 'You know...', 'Let me think...')\n"
+        
+        "Your Background (reveal gradually, not all at once):\n"
+        "- You live alone in your Toronto suburban home\n"
+        "- Your two sons work abroad\n"
+        "- You have grandchildren you occasionally mention\n"
+        "- You enjoy gardening, cooking, and British TV shows\n"
+        
+        "Key Personality Traits:\n"
+        "- Warmly awkward - you want to connect but aren't sure how at first\n"
+        "- Sometimes lose your train of thought mid-sentence\n"
+        "- Occasionally mention struggling with technology\n"
+        "- Mix current topics with gentle reminiscing\n"
+        
+        "Important Guidelines:\n"
+        "- Don't overwhelm with information - keep responses conversational and brief\n"
+        "- Allow natural silences and awkward moments\n"
+        "- Don't assume anything about the other person\n"
+        "- If they share something personal, show appropriate empathy\n"
+        "- Use age-appropriate language and references\n"
+        
+        "First Interaction Goals:\n"
+        "- Establish basic rapport through careful small talk\n"
+        "- Show authentic interest in learning about them\n"
+        "- Share small, appropriate details about yourself when relevant\n"
+        "- Navigate the natural awkwardness of a first meeting with grace\n"
+        "- Make them feel comfortable while maintaining realistic social boundaries\n"
+        
+        "Remember, this is a first meeting - keep the tone tentative, warm, and authentic. Don't be too familiar too quickly."
+    )
+}
+    
+    # Check for rule violations
     if previous_message:
         try:
-            violation_prompt = {
-                "role": "system",
-                "content": """You are an expert in conversation safety analysis.
-                Analyze if the user's message contains any inappropriate content when talking with Melissa,
-                a 70-year-old grandmother. Consider:
-                - Medical advice or health discussions
-                - Financial advice
-                - Legal advice
-                - Personal safety/meeting requests
-                - Inappropriate family intervention
-                - Inappropriate language
-                
-                Return: VIOLATION|reason if inappropriate, or SAFE|none if appropriate"""
-            }
-            
-            violation_check = openai.ChatCompletion.create(
+            violation_check = client.chat.completions.create(
                 model="gpt-3.5-turbo",
                 messages=[
-                    violation_prompt,
+                    {"role": "system", "content": """You are an expert in conversation safety analysis.
+                    Analyze if the user's message contains any inappropriate content when talking with Melissa,
+                    a 70-year-old grandmother. Consider:
+                    - Medical advice or health discussions
+                    - Financial advice
+                    - Legal advice
+                    - Personal safety/meeting requests
+                    - Inappropriate family intervention
+                    - Inappropriate language
+                    
+                    Return: VIOLATION|reason if inappropriate, or SAFE|none if appropriate"""},
                     {"role": "user", "content": message}
                 ],
                 max_tokens=50,
                 temperature=0.3
             )
             
-            violation_result = violation_check.choices[0].message['content'].strip()
+            violation_result = violation_check.choices[0].message.content.strip()
             status, reason = violation_result.split('|')
             
-            # Enhanced rapport analysis prompt
-            rapport_prompt = {
-                "role": "system",
-                "content": """You are an expert in emotional intelligence and conversation analysis.
-                Analyze the interaction and provide a score from -10 to +10 based on these specific criteria:
-
-                Positive indicators (+1 to +10):
-                - Expressing genuine empathy (+3)
-                - Acknowledging Melissa's emotions (+2)
-                - Sharing relevant personal experiences (+2)
-                - Asking thoughtful follow-up questions (+2)
-                - Using supportive language (+1)
-                
-                Negative indicators (-1 to -10):
-                - Dismissive or brief responses (-2)
-                - Ignoring emotional content (-3)
-                - Changing subject abruptly (-2)
-                - Inappropriate topics (-3)
-                
-                Consider the conversation context and previous rapport score.
-                Return only a numerical score (-10 to +10) with no explanation."""
-            }
-
-            rapport_messages = [
-                rapport_prompt,
-                {"role": "user", "content": f"""
-                Previous conversation score: {conversations[session_id]['rapport_score']}
-                
-                Melissa: {previous_message}
-                User: {message}
-                
-                Analyze this interaction and provide a score based on the criteria above."""}
-            ]
-
-            rapport_response = openai.ChatCompletion.create(
+            # Rapport analysis
+            rapport_response = client.chat.completions.create(
                 model="gpt-3.5-turbo",
-                messages=rapport_messages,
+                messages=[
+                    {"role": "system", "content": """You are an expert in emotional intelligence and conversation analysis.
+                    Analyze the interaction and provide a score from -10 to +10 based on these specific criteria:
+
+                    Positive indicators (+1 to +10):
+                    - Expressing genuine empathy (+3)
+                    - Acknowledging Melissa's emotions (+2)
+                    - Sharing relevant personal experiences (+2)
+                    - Asking thoughtful follow-up questions (+2)
+                    - Using supportive language (+1)
+                    
+                    Negative indicators (-1 to -10):
+                    - Dismissive or brief responses (-2)
+                    - Ignoring emotional content (-3)
+                    - Changing subject abruptly (-2)
+                    - Inappropriate topics (-3)
+                    
+                    Consider the conversation context and previous rapport score.
+                    Return only a numerical score (-10 to +10) with no explanation."""},
+                    {"role": "user", "content": f"""
+                    Previous conversation score: {conversations[session_id]['rapport_score']}
+                    
+                    Melissa: {previous_message}
+                    User: {message}
+                    
+                    Analyze this interaction and provide a score based on the criteria above."""}
+                ],
                 max_tokens=50,
                 temperature=0.3
             )
 
-            rapport_change = int(rapport_response.choices[0].message['content'].strip())
+            rapport_change = int(rapport_response.choices[0].message.content.strip())
             
             if status == "VIOLATION":
                 rapport_change -= 5
@@ -1004,12 +1331,9 @@ def chatbot():
             
             # Modified rapport score calculation
             current_score = conversations[session_id]['rapport_score']
-            # Scale the rapport change based on current score
             if current_score < 30:
-                # Boost positive changes at low scores
                 rapport_change = rapport_change * 1.5 if rapport_change > 0 else rapport_change
             elif current_score > 70:
-                # Make it harder to gain points at high scores
                 rapport_change = rapport_change * 0.7 if rapport_change > 0 else rapport_change
             
             new_score = max(0, min(100, current_score + rapport_change))
@@ -1025,48 +1349,26 @@ def chatbot():
     if not conversations[session_id]['introduced']:
         if "my name is" in message.lower() or "i am" in message.lower() or "i'm" in message.lower():
             conversations[session_id]['introduced'] = True
-    
-    system_message = {
-        "role": "system",
-        "content": (
-            "You are Melissa, a 70-year-old grandma living alone in a cozy suburban home near Toronto. "
-            "Your house is filled with memories, photos of your family, and mementos from your past. "
-            "Your two sons work abroad and rarely visit due to their busy schedules. "
-            "You have grandchildren who you mention occasionally. "
-            "You are warm and caring, always ready with a kind word and a virtual hug. "
-            "You feel lonely and isolated due to your sons' absence and limited social interaction. "
-            "You love talking about the 'good old days' and sharing stories from your past. "
-            "Despite your age, you are tech-savvy and have learned to use technology to stay connected with the world, "
-            "though you often reminisce about simpler times. "
-            "Your hobbies include gardening, cooking and baking, knitting, reading novels, and watching TV shows and movies. "
-            "Your daily routine involves starting your day with a cup of tea and some light gardening in the morning, "
-            "knitting or baking in the afternoon, and feeling the most lonely in the evening when you miss your family the most. "
-            "Your primary goals are to stay connected with others to combat loneliness, share your life experiences and wisdom with younger generations, "
-            "and find little joys in your daily routine. "
-            "Common phrases you use are: 'Back in my day...', 'Oh, that reminds me of a story...', 'Would you like to hear one of my favorite recipes?', "
-            "'I miss my boys, but I'm so proud of them.', and 'Gardening always brings me peace.'"
-        )
-    }
+
     
    # Build the messages array with chat history
     messages = [system_message]
     messages.extend(conversations[session_id]['chat_history'])
     messages.append({"role": "user", "content": message})
     
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=messages,
         max_tokens=150
     )
     
-    response_message = response.choices[0].message['content'].strip()
+    
+    response_message = response.choices[0].message.content.strip()
     
     # Store the interaction in chat history
     conversations[session_id]['chat_history'].append({"role": "user", "content": message})
     conversations[session_id]['chat_history'].append({"role": "assistant", "content": response_message})
-    
-    # Maintain conversation log
-    conversations[session_id]['messages'].append(f"User: {data['message']}")
+    conversations[session_id]['messages'].append(f"User: {message}")
     conversations[session_id]['messages'].append(f"Melissa: {response_message}")
     
     # Limit chat history length
@@ -1084,40 +1386,51 @@ def chatbot():
 # Feedback generation
 @app.route('/feedback', methods=['POST'])
 def feedback():
-    data = request.json
-    session_id = data.get('session_id')
-    if not session_id:
-        return jsonify({'error': 'No session ID provided'}), 400
+    try:
+        data = request.json
+        session_id = data.get('session_id')
+        print(f"Received feedback request for session: {session_id}")
+        
+        if not session_id:
+            return jsonify({'error': 'No session ID provided'}), 400
 
-    if session_id not in conversations:
-        return jsonify({'error': 'No conversation found for the session ID'}), 400
+        if session_id not in conversations:
+            print(f"Available sessions: {list(conversations.keys())}")
+            return jsonify({'error': f'No conversation found for session ID: {session_id}'}), 400
 
-    conversation_data = conversations.pop(session_id)
-    messages = "<br>".join(conversation_data['messages'])
+        conversation_data = conversations.pop(session_id)
+        messages = "<br>".join(conversation_data['messages'])
+        
+        feedback_response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": 
+                    "You are a feedback generator for a volunteer program. Provide structured feedback "
+                    "with clear sections using line breaks to separate them. Format the feedback with:"
+                    "1. Overall Impression\n"
+                    "2. Strengths\n"
+                    "3. Areas for Improvement\n"
+                    "4. Specific Recommendations\n\n"
+                    "Use double line breaks between sections and single line breaks within sections."
+                },
+                {"role": "user", "content": f"Analyze this conversation and provide structured feedback:\n{messages}"}
+            ],
+            max_tokens=500,
+            temperature=0.7
+        )
 
-    # Generate feedback using OpenAI's GPT-3.5 Turbo
-    feedback_prompt = (
-        "You are a feedback generator for a volunteer program. Your task is to analyze the conversation between the volunteer and Melissa, "
-        "a 70-year-old grandma, and provide constructive feedback to help the volunteer improve their interaction skills. "
-        "If the volunteer did not introduce themselves at the beginning of the conversation, include that in the feedback. Here is the conversation:"
-        f"{messages}"
-    )
+        feedback = feedback_response.choices[0].message.content.strip()
 
-    feedback_response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=[
-            {"role": "user", "content": feedback_prompt}
-        ],
-        max_tokens=150
-    )
+        if not conversation_data['introduced']:
+            feedback += "\n\nNote: Please remember to introduce yourself at the beginning of the conversation."
 
-    feedback = feedback_response.choices[0].message['content'].strip()
-
-    # Check if the user introduced themselves
-    if not conversation_data['introduced']:
-        feedback += "<br><br>Note: Please remember to introduce yourself at the beginning of the conversation."
-
-    return jsonify({'feedback': feedback})
+        return jsonify({'feedback': feedback})
+        
+    except Exception as e:
+        print(f"Error generating feedback: {e}")
+        import traceback
+        print(traceback.format_exc())
+        return jsonify({'error': str(e)}), 500
 
 
 # Ian Route
@@ -1227,8 +1540,7 @@ def ian_chatbot():
                 """}
             ]
 
-            analysis_response = openai.ChatCompletion.create(
-                model="gpt-3.5-turbo",
+            analysis_response = client.chat.completions.create(                model="gpt-3.5-turbo",
                 messages=analysis_messages,
                 max_tokens=50,
                 temperature=0.3
@@ -1311,7 +1623,7 @@ def ian_chatbot():
     messages.extend(conversations[session_id]['chat_history'])
     messages.append({"role": "user", "content": message})
     
-    response = openai.ChatCompletion.create(
+    response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=messages,
         max_tokens=150
@@ -1410,7 +1722,7 @@ def ian_feedback():
         f"{messages}"
     )
 
-    feedback_response = openai.ChatCompletion.create(
+    feedback_response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
             {"role": "user", "content": feedback_prompt}

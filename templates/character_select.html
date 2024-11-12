@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -54,7 +55,8 @@
             font-weight: 700;
             margin-bottom: 2rem;
             text-align: center;
-            margin-top: 3rem;  /* Added margin to account for back button */
+            margin-top: 3rem;
+            /* Added margin to account for back button */
         }
 
         .characters-container {
@@ -67,14 +69,15 @@
         }
 
         .character-card {
-            flex: 0 1 400px; 
+            flex: 0 1 400px;
             border: 2px solid var(--primary-black);
             padding: 2rem;
             text-align: center;
             background: white;
-            min-height: 500px; 
+            min-height: 500px;
             display: flex;
             flex-direction: column;
+            min-height: 400px
         }
 
         .character-image {
@@ -94,7 +97,7 @@
             font-size: 1.5rem;
             font-weight: 700;
             margin-bottom: 0.5rem;
-            height: 2rem; 
+            height: 2rem;
         }
 
         .character-level {
@@ -107,11 +110,11 @@
         .character-description {
             font-size: 1rem;
             line-height: 1.5;
-            margin-bottom: 1.5rem;
-            flex-grow: 1;  
-            min-height: 150px;  
+            margin-bottom: 1rem;
+            flex-grow: 1;
+            min-height: 150px;
             display: flex;
-            align-items: center; 
+            align-items: center;
             justify-content: center;
         }
 
@@ -125,47 +128,80 @@
             text-transform: uppercase;
             cursor: pointer;
             transition: background 0.2s;
-            margin-top: auto; 
+            margin-top: auto;
         }
 
         .character-button:hover {
             background: var(--primary-red);
         }
+
+        .chat-options {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            margin-top: 1rem;
+        }
+
+        .character-button {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            min-width: 120px;
+        }
+
+        .button-icon {
+            flex-shrink: 0;
+        }
     </style>
 </head>
+
 <body>
     <a href="/" class="back-button">← Back to Home</a>
-    
-    <div class="container">
-        <h1 class="title">Select a Character to Chat With</h1>
-        
-        <div class="characters-container">
-            <!-- Melissa Card -->
-            <div class="character-card">
-                <div class="character-image">👵</div>
-                <h2 class="character-name">Melissa</h2>
-                <div class="character-level">Basic Communication Practice</div>
-                <p class="character-description">
-                    A warm and caring grandmother who loves sharing stories about her life
-                    and family. Practice basic communication skills and empathy building
-                    through conversations about daily life and family relationships.
-                </p>
-                <button onclick="selectCharacter('melissa')" class="character-button">Chat with Melissa</button>
-            </div>
 
-            <!-- Ian Card -->
-            <div class="character-card">
-                <div class="character-image">👨</div>
-                <h2 class="character-name">Ian</h2>
-                <div class="character-level">Advanced Communication Practice</div>
-                <p class="character-description">
-                    A quiet figure with a guarded past, filled with dark and unspoken memories. 
-                    His story is there, but out of reach for strangers. For those who can earn his trust, he may gradually open up and reveal the
-                    stories he keeps to his heart.
-                </p>
-                <button onclick="selectCharacter('ian')" class="character-button">Chat with Ian</button>
-            </div>
+    <!-- Melissa Card -->   
+    <div class="character-card">
+        <div class="character-image">👵</div>
+        <h2 class="character-name">Melissa</h2>
+        <div class="character-level">Basic Communication Practice</div>
+        <p class="character-description">
+            A warm and caring grandmother who loves sharing stories about her life
+            and family. Practice basic communication skills and empathy building
+            through conversations about daily life and family relationships.
+        </p>
+        <div class="chat-options">
+            <button onclick="window.location.href='/melissa_chat'" class="character-button text-chat">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    class="button-icon">
+                    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                </svg>
+                Text Chat
+            </button>
+            <button onclick="window.location.href='/melissa_voicechat'" class="character-button voice-chat">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                    class="button-icon">
+                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z" />
+                    <path d="M19 10v2a7 7 0 0 1-14 0v-2" />
+                </svg>
+                Voice Chat
+            </button>
         </div>
+    </div>
+
+    <!-- Ian Card -->
+    <div class="character-card">
+        <div class="character-image">👨</div>
+        <h2 class="character-name">Ian</h2>
+        <div class="character-level">Advanced Communication Practice</div>
+        <p class="character-description">
+            A quiet figure with a guarded past, filled with dark and unspoken memories.
+            His story is there, but out of reach for strangers. For those who can earn his trust, he may gradually open
+            up and reveal the
+            stories he keeps to his heart.
+        </p>
+        <button onclick="selectCharacter('ian')" class="character-button">Chat with Ian</button>
+    </div>
+    </div>
     </div>
 
     <script>
@@ -178,4 +214,5 @@
         }
     </script>
 </body>
+
 </html>
