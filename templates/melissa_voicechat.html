@@ -555,7 +555,7 @@
 
             <div id="rapport-meter" class="rapport-section">
                 <h3 class="rapport-title">
-                    Rapport Building Progress
+                    Rapport Level
                     <span id="rapport-status">Building Connection...</span>
                 </h3>
                 <div class="rapport-metrics">
@@ -616,30 +616,107 @@
     // Audio control functions
     function stopCurrentAudio() {
         if (currentAudio) {
-            currentAudio.pause();
-            currentAudio.currentTime = 0;
-            currentAudio = null;
+            try {
+                currentAudio.pause();
+                currentAudio.currentTime = 0;
+                if (currentAudio.src) {
+                    URL.revokeObjectURL(currentAudio.src);
+                }
+            } catch (e) {
+                console.error('Error stopping audio:', e);
+            } finally {
+                currentAudio = null;
+            }
         }
     }
 
-    async function playAudioResponse(audioData) {
+    async function playAudioResponse(base64Audio) {
         try {
             stopCurrentAudio();
-            const audio = new Audio(`data:audio/mp3;base64,${audioData}`);
+
+            // Convert base64 to blob with proper Safari handling
+            const audioData = atob(base64Audio);
+            const arrayBuffer = new ArrayBuffer(audioData.length);
+            const view = new Uint8Array(arrayBuffer);
+
+            for (let i = 0; i < audioData.length; i++) {
+                view[i] = audioData.charCodeAt(i);
+            }
+
+            const audioBlob = new Blob([arrayBuffer], { type: 'audio/mp3' });
+            const audioUrl = URL.createObjectURL(audioBlob);
+
+            // Create and configure audio element
+            const audio = new Audio();
             currentAudio = audio;
+
+            // Safari detection
+            const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+            if (isSafari) {
+                // Safari-specific setup
+                console.log('Safari detected, using special handling');
+                return new Promise((resolve, reject) => {
+                    audio.preload = 'auto';
+
+                    // Set up event listeners for Safari
+                    audio.addEventListener('canplaythrough', async () => {
+                        try {
+                            // Create and trigger user interaction
+                            const tempButton = document.createElement('button');
+                            tempButton.style.display = 'none';
+                            document.body.appendChild(tempButton);
+
+                            const playAttempt = async () => {
+                                try {
+                                    audio.src = audioUrl;
+                                    await audio.play();
+                                    tempButton.remove();
+                                    resolve();
+                                } catch (e) {
+                                    console.error('Safari playback error:', e);
+                                    reject(e);
+                                }
+                            };
+
+                            tempButton.addEventListener('click', playAttempt);
+                            tempButton.click();
+                        } catch (error) {
+                            console.error('Safari setup error:', error);
+                            reject(error);
+                        }
+                    }, { once: true });
+
+                    // Error handling
+                    audio.addEventListener('error', (e) => {
+                        console.error('Audio loading error:', e);
+                        reject(e);
+                    });
+
+                    // Set source and load
+                    audio.src = audioUrl;
+                    audio.load();
+                });
+            } else {
+                // Standard handling for other browsers
+                audio.src = audioUrl;
+                await audio.play();
+            }
+
+            // Setup cleanup
+            audio.onended = () => {
+                URL.revokeObjectURL(audioUrl);
+                currentAudio = null;
+            };
 
             audio.onerror = (error) => {
                 console.error('Audio playback error:', error);
+                URL.revokeObjectURL(audioUrl);
                 currentAudio = null;
             };
 
-            audio.onended = () => {
-                currentAudio = null;
-            };
-
-            await audio.play();
         } catch (error) {
-            console.error('Error playing audio:', error);
+            console.error('Audio playback error:', error);
             currentAudio = null;
         }
     }
@@ -753,7 +830,12 @@
 
                 // Play audio response if available and not recording
                 if (chatData.audio && !isRecording) {
-                    await playAudioResponse(chatData.audio);
+                    try {
+                        await playAudioResponse(chatData.audio);
+                    } catch (audioError) {
+                        console.error('Error playing audio response:', audioError);
+                        showWarning('Audio playback failed. Please try again.');
+                    }
                 }
             }
 
