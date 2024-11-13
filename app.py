@@ -902,34 +902,44 @@ def melissa_voicechat():
 def transcribe_audio():
     try:
         if 'audio' not in request.files:
+            print("No audio file in request")  
             return jsonify({'error': 'No audio file provided'}), 400
             
         audio_file = request.files['audio']
+        print(f"Received file: {audio_file.filename}")  
         
         # Save the audio file temporarily
         temp_dir = tempfile.mkdtemp()
         temp_path = os.path.join(temp_dir, 'input.wav')
+        
+        print(f"Saving to: {temp_path}")  
         audio_file.save(temp_path)
+        
+        print(f"File size: {os.path.getsize(temp_path)} bytes") 
         
         # Transcribe the audio
         transcribed_text = voice_handler.transcribe_audio(temp_path)
         
+        # Cleanup
         os.remove(temp_path)
         os.rmdir(temp_dir)
         
         if transcribed_text:
+            print(f"Transcribed text: {transcribed_text}") 
             return jsonify({'text': transcribed_text})
         else:
+            print("Transcription failed") 
             return jsonify({'error': 'Transcription failed'}), 500
             
     except Exception as e:
         print(f"Transcription error: {e}")
+        import traceback
+        print(traceback.format_exc())
         return jsonify({'error': str(e)}), 500
 
 @app.route('/voice_chat', methods=['POST'])
 def voice_chat():
     try:
-        # Basic request validation
         data = request.json
         if 'message' not in data:
             return jsonify({'error': 'No message provided'}), 400
@@ -968,7 +978,7 @@ def voice_chat():
 
         # Initialize response_message variable
         response_message = None
-        status = 'SAFE'  # Default status
+        status = 'SAFE'
         
         # Safety check for violations
         try:
@@ -1050,11 +1060,10 @@ def voice_chat():
         except Exception as e:
             print(f"Error in violation check: {e}")
             warning_message = "Unable to verify message safety. Proceeding with caution."
-            status = 'SAFE'  # Default to safe to continue conversation
+            status = 'SAFE'  
 
         # Proceed with normal conversation if no violation
         if status == 'SAFE':
-            # Rapport analysis
             try:
                 rapport_prompt = {
                     "role": "system",
