@@ -5,12 +5,10 @@ import base64  # Make sure this import is included
 import io
 import tempfile
 
-# Load environment variables
 load_dotenv()
 
 class VoiceChatHandler:
     def __init__(self):
-        """Initialize the voice chat handler with OpenAI client"""
         self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
     def text_to_speech(self, text):
@@ -22,11 +20,10 @@ class VoiceChatHandler:
             print(f"Starting text-to-speech conversion for text: {text[:50]}...")
             
             # Generate speech using OpenAI's TTS
-            # This creates an audio file from the text using OpenAI's API
             response = self.client.audio.speech.create(
-                model="tts-1",    # The model to use for TTS
-                voice="alloy",    # The voice to use (alloy is a neutral voice)
-                input=text        # The text to convert to speech
+                model="tts-1",    
+                voice="alloy",    
+                input=text        
             )
             
             # Convert bytes to base64 string for JSON serialization
@@ -37,7 +34,6 @@ class VoiceChatHandler:
             return audio_base64
             
         except Exception as e:
-            # If anything goes wrong, print the error and traceback
             print(f"Text-to-speech error: {e}")
             import traceback
             print(f"Traceback: {traceback.format_exc()}")
