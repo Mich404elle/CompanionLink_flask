@@ -1,6 +1,7 @@
 from flask import Flask, request, jsonify, render_template
 import openai as openai_old
 from openai import OpenAI 
+from flask_cors import CORS
 import os
 import re
 import tempfile
@@ -15,6 +16,7 @@ import numpy as np
 load_dotenv()
 
 app = Flask(__name__)
+CORS(app)
 
 # Initialize OpenAI client
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
@@ -963,6 +965,10 @@ def voice_chat():
         if not conversations[session_id]['introduced']:
             if "my name is" in message.lower() or "i am" in message.lower() or "i'm" in message.lower():
                 conversations[session_id]['introduced'] = True
+
+        # Initialize response_message variable
+        response_message = None
+        status = 'SAFE'  # Default status
         
         # Safety check for violations
         try:
@@ -1188,6 +1194,10 @@ def voice_chat():
             
             response_message = response.choices[0].message.content.strip()
 
+        # Ensure we have a response_message
+        if not response_message:
+            response_message = "I apologize, but I'm having trouble forming a response right now..."
+
         # Update conversation history
         conversations[session_id]['chat_history'].append({"role": "user", "content": message})
         conversations[session_id]['chat_history'].append({"role": "assistant", "content": response_message})
@@ -1202,7 +1212,7 @@ def voice_chat():
         chat_data = {
             'response': response_message,
             'warning': warning_message,
-            'rapport_score': conversations[session_id]['rapport_score'],
+            'rapport_score': conversations[session_id].get('rapport_score', 0),
             'character_unlocked': conversations[session_id]['character_unlocked'],
             'conversation_ended': conversations[session_id].get('conversation_ended', False)
         }
@@ -1218,7 +1228,7 @@ def voice_chat():
             chat_data['audio_error'] = str(e)
         
         return jsonify(chat_data)
-            
+        
     except Exception as e:
         print(f"Voice chat error: {e}")
         return jsonify({'error': str(e)}), 500

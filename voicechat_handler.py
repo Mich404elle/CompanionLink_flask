@@ -1,92 +1,81 @@
-# voicechat_handler.py
 from openai import OpenAI
-import sounddevice as sd
-import numpy as np
-import wave
-import tempfile
 import os
 from dotenv import load_dotenv
-import base64
+import base64  # Make sure this import is included
+import io
+import tempfile
 
 # Load environment variables
 load_dotenv()
 
-# Initialize OpenAI client
-client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-
 class VoiceChatHandler:
     def __init__(self):
-        self.sample_rate = 44100
-        self.channels = 1
-        self.dtype = np.int16
-
-    def record_audio(self, duration=5):
-        """Record audio from microphone"""
-        print("Recording...")
-        recording = sd.rec(
-            int(duration * self.sample_rate),
-            samplerate=self.sample_rate,
-            channels=self.channels,
-            dtype=self.dtype
-        )
-        sd.wait()
-        print("Recording complete")
-        return recording
-
-    def save_audio(self, recording, filename="temp_recording.wav"):
-        """Save recording to WAV file"""
-        with wave.open(filename, 'wb') as wf:
-            wf.setnchannels(self.channels)
-            wf.setsampwidth(2)  # 16-bit
-            wf.setframerate(self.sample_rate)
-            wf.writeframes(recording.tobytes())
-        return filename
-
-    def transcribe_audio(self, audio_file):
-        """Transcribe audio using Whisper API"""
-        try:
-            with open(audio_file, 'rb') as af:
-                # Using new client format
-                transcript = client.audio.transcriptions.create(
-                    model="whisper-1",
-                    file=af
-                )
-            return transcript.text
-        except Exception as e:
-            print(f"Transcription error: {e}")
-            return None
+        """Initialize the voice chat handler with OpenAI client"""
+        self.client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
     def text_to_speech(self, text):
-        """Convert text to speech using OpenAI TTS"""
+        """
+        Convert text to speech using OpenAI's TTS API
+        Returns base64 encoded audio data for Melissa's responses
+        """
         try:
             print(f"Starting text-to-speech conversion for text: {text[:50]}...")
             
-            # Using new client format
-            response = client.audio.speech.create(
-                model="tts-1",
-                voice="alloy",
-                input=text
+            # Generate speech using OpenAI's TTS
+            # This creates an audio file from the text using OpenAI's API
+            response = self.client.audio.speech.create(
+                model="tts-1",    # The model to use for TTS
+                voice="alloy",    # The voice to use (alloy is a neutral voice)
+                input=text        # The text to convert to speech
             )
             
-            # Save to temporary file and convert to base64
-            temp_dir = tempfile.mkdtemp()
-            temp_path = os.path.join(temp_dir, 'output.mp3')
-            
-            # Write the response to file
-            response.stream_to_file(temp_path)
-            
-            # Convert to base64
-            with open(temp_path, 'rb') as audio_file:
-                audio_data = base64.b64encode(audio_file.read()).decode('utf-8')
-                
-            # Clean up
-            os.remove(temp_path)
-            os.rmdir(temp_dir)
-            
-            return audio_data
+            # Convert bytes to base64 string for JSON serialization
+            # 1. response.content contains the raw audio bytes
+            # 2. b64encode converts these bytes to base64 format
+            # 3. decode('utf-8') converts the base64 bytes to a string
+            audio_base64 = base64.b64encode(response.content).decode('utf-8')
+            return audio_base64
             
         except Exception as e:
+            # If anything goes wrong, print the error and traceback
             print(f"Text-to-speech error: {e}")
             import traceback
             print(f"Traceback: {traceback.format_exc()}")
             return None
+
+    def transcribe_audio(self, audio_file_path):
+        """
+        Transcribe audio file using OpenAI's Whisper API
+        Expects path to an audio file
+        """
+        try:
+            with open(audio_file_path, 'rb') as audio_file:
+                # Transcribe using Whisper
+                transcript = self.client.audio.transcriptions.create(
+                    model="whisper-1",
+                    file=audio_file
+                )
+            
+            return transcript.text
+            
+        except Exception as e:
+            print(f"Transcription error: {e}")
+            import traceback
+            print(f"Traceback: {traceback.format_exc()}")
+            return None
+
+# Test function
+def test_voice_handler():
+    handler = VoiceChatHandler()
+    
+    # Test text to speech
+    test_text = "Hello, this is a test message!"
+    print("Testing text to speech...")
+    audio_data = handler.text_to_speech(test_text)
+    if audio_data:
+        print("✓ Text-to-speech conversion successful")
+    else:
+        print("⨯ Text-to-speech conversion failed")
+
+if __name__ == "__main__":
+    test_voice_handler()
