@@ -13,6 +13,13 @@
             --background: #FFFFFF;
             --grid-color: #E5E5E5;
             --spacing: 1.5rem;
+            --sidebar-width: 300px;
+
+            /* Rapport meter colors */
+            --rapport-low: #f8c5ad;
+            --rapport-medium:#f99d73;
+            --rapport-high: #f97a40;
+            --rapport-excellent: #f54e00;
         }
 
         * {
@@ -24,8 +31,7 @@
 
         body {
             background: var(--background);
-            min-height: 100vh;
-            position: relative;
+            height: 100vh;
             overflow: hidden;
         }
 
@@ -46,19 +52,19 @@
 
         .container {
             display: grid;
-            grid-template-columns: 300px 1fr;
-            gap: 0;
+            grid-template-columns: var(--sidebar-width) 1fr;
             height: 100vh;
             max-width: 1600px;
             margin: 0 auto;
-            overflow: hidden;
         }
 
+        /* Sidebar Styles */
         .sidebar {
             background: var(--background);
             border-right: 2px solid var(--primary-black);
             padding: var(--spacing);
             overflow-y: auto;
+            height: 100vh;
         }
 
         .profile-header {
@@ -96,13 +102,12 @@
             line-height: 1.5;
         }
 
+        /* Chat Area */
         .chat-area {
-            display: grid;
-            grid-template-rows: auto auto 1fr auto;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
             background: var(--background);
-            position: relative;
-            max-height: 100vh;
-            overflow: hidden;
         }
 
         .chat-header {
@@ -119,129 +124,44 @@
             font-weight: 700;
         }
 
-        .rapport-section {
-            padding: 1.5rem;
-            border-bottom: 2px solid var(--primary-black);
-            background: var(--background);
-            max-width: 100%;
-        }
-
-        .rapport-title {
-            font-size: 1rem;
-            font-weight: bold;
-            text-transform: uppercase;
-            margin-bottom: 1rem;
+        /* Metric Icons Section */
+        .metric-icons {
             display: flex;
             justify-content: space-between;
-            align-items: center;
+            padding: 1rem var(--spacing);
+            border-bottom: 2px solid var(--primary-black);
+            background: var(--background);
         }
 
-        .rapport-title span {
-            font-size: 0.875rem;
-            color: #666;
-        }
-
-        .rapport-metrics {
+        .metric-icon {
             display: flex;
             flex-direction: column;
-            gap: 1rem;
-        }
-
-        .meter-row {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-
-        .meter-label {
-            width: 120px;
-            font-weight: 500;
-            font-size: 0.875rem;
-            display: flex;
             align-items: center;
             gap: 0.5rem;
+            padding: 0.5rem;
+            min-width: 100px;
         }
 
-        .meter-icon {
-            width: 16px;
-            height: 16px;
+        .metric-icon svg {
+            width: 28px;
+            height: 28px;
+            transition: all 0.3s ease;
         }
 
-        .meter-bar {
-            flex: 1;
-            height: 12px;
-            background: #f3f4f6;
-            border-radius: 6px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .meter-progress {
-            background-color: #3b82f6;
-            height: 100%;
-            width: 0;
-        }
-
-        .meter-progress::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: linear-gradient(90deg, rgba(255, 255, 255, 0.1) 25%, rgba(255, 255, 255, 0.2) 50%, rgba(255, 255, 255, 0.1) 75%);
-            background-size: 200% 100%;
-            animation: shimmer 2s infinite;
-        }
-
-        .meter-value {
-            width: 50px;
-            text-align: right;
-            font-weight: 600;
+        .metric-label {
             font-size: 0.875rem;
-            color: #1f2937;
+            font-weight: 500;
+            text-align: center;
         }
 
-        .rapport-feedback {
-            margin-top: 0.5rem;
-            font-size: 0.875rem;
-            color: #059669;
-            display: none;
-            animation: fadeIn 0.3s ease-in-out;
-        }
-        
-
-        @keyframes shimmer {
-            0% {
-                background-position: 200% 0;
-            }
-
-            100% {
-                background-position: -200% 0;
-            }
-        }
-
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
+        /* Messages Container */
         .messages-container {
+            flex: 1;
             padding: var(--spacing);
             overflow-y: auto;
             display: flex;
             flex-direction: column;
             gap: var(--spacing);
-            height: 100%;
         }
 
         .message {
@@ -263,19 +183,14 @@
             border: 2px solid var(--primary-black);
         }
 
-        .timestamp {
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            color: #666;
-            margin-top: 0.25rem;
-        }
-
+        /* Input Area */
         .input-area {
             border-top: 2px solid var(--primary-black);
             padding: var(--spacing);
             display: grid;
             grid-template-columns: 1fr auto;
             gap: var(--spacing);
+            background: var(--background);
         }
 
         textarea {
@@ -301,17 +216,92 @@
             background: var(--primary-red);
         }
 
+        /* Score States */
+        .metric-icon {
+            transition: color 0.3s ease, opacity 0.3s ease;
+        }
+
+        .metric-icon svg {
+            width: 28px;
+            height: 28px;
+            stroke: currentColor;
+            fill: none;
+        }
+
+        /* Make sure these are targeting both the icon and its SVG */
+        .metric-icon.score-low,
+        .metric-icon.score-low svg {
+            color: var(--rapport-low);
+            opacity: 0.5;
+        }
+
+        .metric-icon.score-medium,
+        .metric-icon.score-medium svg {
+            color: var(--rapport-medium);
+            opacity: 0.7;
+        }
+
+        .metric-icon.score-high,
+        .metric-icon.score-high svg {
+            color: var(--rapport-high);
+            opacity: 0.85;
+        }
+
+        .metric-icon.score-excellent,
+        .metric-icon.score-excellent svg {
+            color: var(--rapport-excellent);
+            opacity: 1;
+        }
+
+        /* Base icon styles */
+        .metric-icon {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            min-width: 100px;
+            transition: color 0.3s ease, opacity 0.3s ease;
+        }
+
+        .metric-icon svg {
+            width: 28px;
+            height: 28px;
+            stroke: currentColor;
+            fill: none;
+            transition: all 0.3s ease;
+        }
+
+        /* Animation */
+        @keyframes scorePulse {
+            0% {
+                transform: scale(1);
+            }
+
+            50% {
+                transform: scale(1.2);
+            }
+
+            100% {
+                transform: scale(1);
+            }
+        }
+
+        .score-changed {
+            animation: scorePulse 0.5s ease;
+        }
+
+        /* Utility Classes */
         .warning {
-            position: absolute;
+            position: fixed;
             bottom: 100px;
-            left: var(--spacing);
+            left: calc(var(--sidebar-width) + var(--spacing));
             right: var(--spacing);
             background: var(--primary-red);
             color: var(--background);
             padding: 1rem;
             display: none;
             z-index: 1000;
-            /* Make sure it's above other elements */
             border-radius: 4px;
             font-weight: 500;
             cursor: pointer;
@@ -327,6 +317,7 @@
             border: 2px solid var(--primary-black);
             text-align: center;
             display: none;
+            z-index: 1001;
         }
 
         @media (max-width: 768px) {
@@ -338,20 +329,58 @@
                 display: none;
             }
 
-            .chat-area {
-                height: 100vh;
+            .warning {
+                left: var(--spacing);
             }
+        }
+
+        /* Rapport Progress Bar */
+        .rapport-bar {
+            margin-top: 0.5rem;
+        }
+
+        .bar-container {
+            height: 8px;
+            background: #f3f4f6;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .bar-fill {
+            height: 100%;
+            width: 0;
+            transition: width 0.3s ease, background-color 0.3s ease;
+        }
+
+        .bar-fill[data-stage="initial"] {
+            background: var(--rapport-low);
+        }
+
+        .bar-fill[data-stage="building"] {
+            background: var(--rapport-medium);
+        }
+
+        .bar-fill[data-stage="connected"] {
+            background: var(--rapport-high);
+        }
+
+        .bar-stages {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.25rem;
+            font-size: 0.75rem;
+            color: #666;
         }
     </style>
 </head>
 
 <body>
     <div class="container">
+        <!-- Sidebar -->
         <aside class="sidebar">
             <div class="profile-header">
                 <h1 class="profile-title">Melissa</h1>
             </div>
-
             <div class="info-section">
                 <div class="info-item">
                     <div class="info-label">Age</div>
@@ -369,54 +398,84 @@
                     <div class="info-label">Interests</div>
                     <div class="info-value">Gardening / Cooking / Reading / Television</div>
                 </div>
+                <div class="info-item">
+                    <div class="info-label">Rapport Progress</div>
+                    <div class="rapport-bar">
+                        <div class="bar-container">
+                            <div class="bar-fill" id="sidebar-rapport"></div>
+                        </div>
+                        <div class="bar-stages">
+                            <span class="stage">Initial</span>
+                            <span class="stage">Building</span>
+                            <span class="stage">Connected</span>
+                        </div>
+                    </div>
+                </div>
             </div>
         </aside>
 
+        <!-- Main Chat Area -->
         <main class="chat-area">
             <header class="chat-header">
                 <h2 class="header-title">Chat Session</h2>
                 <button onclick="endChat()">End Chat</button>
             </header>
 
-            <div id="rapport-meter" class="rapport-section">
-                <h3 class="rapport-title">
-                    Rapport Building Progress
-                    <span id="rapport-status">Building Connection...</span>
-                </h3>
-                <div class="rapport-metrics">
-                    <div class="meter-row">
-                        <span class="meter-label">
-                            <svg class="meter-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                stroke-width="2">
-                                <path
-                                    d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
-                            </svg>
-                            Rapport
-                        </span>
-                        <div class="meter-bar">
-                            <div id="rapport-progress" class="meter-progress"></div>
-                        </div>
-                        <span id="rapport-value" class="meter-value">0%</span>
-                    </div>
+            <!-- Metric Icons -->
+            <div class="metric-icons">
+                <!-- Empathy -->
+                <div class="metric-icon" id="empathy-metric">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path
+                            d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                    <span class="metric-label">Empathy</span>
                 </div>
-                <div id="rapport-feedback" class="rapport-feedback">
-                    Great connection! Keep showing empathy and engagement.
+
+                <!-- Engagement -->
+                <div class="metric-icon" id="engagement-metric">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path
+                            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                    <span class="metric-label">Engagement</span>
+                </div>
+
+                <!-- Flow -->
+                <div class="metric-icon" id="flow-metric">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path
+                            d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
+                    </svg>
+                    <span class="metric-label">Flow</span>
+                </div>
+
+                <!-- Respect -->
+                <div class="metric-icon" id="respect-metric">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path
+                            d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                    </svg>
+                    <span class="metric-label">Respect</span>
                 </div>
             </div>
 
+            <!-- Messages Container -->
             <div class="messages-container" id="messages"></div>
 
+            <!-- Warning Message -->
             <div id="warning" class="warning" onclick="closeWarning()"></div>
 
+            <!-- Input Area -->
             <div class="input-area">
                 <textarea id="message" placeholder="Type your message..."
-                    onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(); }">
-                </textarea>
+                    onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(); }"></textarea>
                 <button onclick="sendMessage()">Send</button>
             </div>
         </main>
     </div>
 
+    <!-- Feedback Modal -->
     <div id="feedback">
         <h2>Session Feedback</h2>
         <p id="feedback-message"></p>
@@ -427,12 +486,6 @@
         const sessionId = Date.now().toString();
         const messagesContainer = document.getElementById('messages');
 
-        const scores = {
-            empathy: 0,
-            engagement: 0,
-            listening: 0
-        };
-
         function getTimeString() {
             return new Date().toLocaleTimeString('en-US', {
                 hour12: false,
@@ -441,38 +494,48 @@
             });
         }
 
-        function updateRapportMeter(rapportScore) {
-            // progress bar
-            const progressBar = document.getElementById('rapport-progress');
-            const valueDisplay = document.getElementById('rapport-value');
-            const statusDisplay = document.getElementById('rapport-status');
-            const feedbackDisplay = document.getElementById('rapport-feedback');
-
-            progressBar.style.width = `${rapportScore}%`;
-            valueDisplay.textContent = `${Math.round(rapportScore)}%`;
-
-            let color;
-            if (rapportScore < 30) {
-                color = '#94a3b8';
-                statusDisplay.textContent = 'Building Connection...';
-            } else if (rapportScore < 60) {
-                color = '#60a5fa';
-                statusDisplay.textContent = 'Connected';
-            } else if (rapportScore < 80) {
-                color = '#34d399';
-                statusDisplay.textContent = 'Strong Connection';
-            } else {
-                color = '#fcd34d';
-                statusDisplay.textContent = 'Excellent Connection!';
+        function updateMetricIcon(metricId, score) {
+            console.log(`Updating ${metricId} with score ${score}`);
+            const icon = document.getElementById(`${metricId}-metric`);
+            if (!icon) {
+                console.error(`Metric icon ${metricId} not found`);
+                return;
             }
-            progressBar.style.backgroundColor = color;
 
-            // Show feedback for significant improvements
-            if (rapportScore > 0 && rapportScore % 20 === 0) {
-                feedbackDisplay.style.display = 'block';
-                setTimeout(() => {
-                    feedbackDisplay.style.display = 'none';
-                }, 3000);
+            // Remove old classes
+            icon.classList.remove('score-low', 'score-medium', 'score-high', 'score-excellent');
+
+            // Add new class based on score
+            if (score >= 80) {
+                icon.classList.add('score-excellent');
+            } else if (score >= 60) {
+                icon.classList.add('score-high');
+            } else if (score >= 40) {
+                icon.classList.add('score-medium');
+            } else {
+                icon.classList.add('score-low');
+            }
+
+            // Add animation
+            icon.classList.add('score-changed');
+            setTimeout(() => {
+                icon.classList.remove('score-changed');
+            }, 500);
+        }
+
+        function updateRapportBar(score) {
+            const barFill = document.getElementById('sidebar-rapport');
+            if (barFill) {
+                barFill.style.width = `${score}%`;
+
+                // Update stage and color
+                if (score >= 80) {
+                    barFill.dataset.stage = "connected";
+                } else if (score >= 40) {
+                    barFill.dataset.stage = "building";
+                } else {
+                    barFill.dataset.stage = "initial";
+                }
             }
         }
 
@@ -486,8 +549,6 @@
             messageInput.value = '';
 
             try {
-                console.log("Sending message:", message);
-
                 const response = await fetch('/chatbot', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -498,10 +559,9 @@
                 });
 
                 const data = await response.json();
-                console.log("Received response:", data);
+                console.log("Received data:", data);
 
                 if (data.error) {
-                    console.error("Error from server:", data.error);
                     document.getElementById('warning').innerText = data.error;
                     document.getElementById('warning').style.display = 'block';
                     return;
@@ -518,16 +578,15 @@
                     document.getElementById('warning').style.display = 'none';
                 }
 
-                // Fixed rapport score update
-                if (typeof data.rapport_score === 'number') {
-                    const progressBar = document.getElementById('rapport-progress');
-                    const valueDisplay = document.getElementById('rapport-value');
+                if (data.rapport_data) {
+                    // Update metrics icons
+                    updateMetricIcon('empathy', data.rapport_data.metrics.empathy);
+                    updateMetricIcon('engagement', data.rapport_data.metrics.engagement);
+                    updateMetricIcon('flow', data.rapport_data.metrics.flow);
+                    updateMetricIcon('respect', data.rapport_data.metrics.respect);
 
-                    // Ensure the width is set as a percentage
-                    progressBar.style.width = `${data.rapport_score}%`;
-                    valueDisplay.textContent = `${Math.round(data.rapport_score)}%`;
-
-                    console.log("Updated rapport score:", data.rapport_score);
+                    // Update rapport bar
+                    updateRapportBar(data.rapport_data.overall);
                 }
 
             } catch (error) {
@@ -536,6 +595,7 @@
                 document.getElementById('warning').style.display = 'block';
             }
         }
+
         function appendMessage(content, type) {
             const messageDiv = document.createElement('div');
             messageDiv.className = `message ${type}`;

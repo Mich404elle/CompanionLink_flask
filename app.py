@@ -3,6 +3,7 @@ import openai as openai_old
 from openai import OpenAI 
 from flask_cors import CORS
 import os
+import random 
 import re
 import tempfile
 import base64
@@ -920,7 +921,6 @@ def transcribe_audio():
         # Transcribe the audio
         transcribed_text = voice_handler.transcribe_audio(temp_path)
         
-        # Cleanup
         os.remove(temp_path)
         os.rmdir(temp_dir)
         
@@ -1265,203 +1265,238 @@ def voice_chat():
 # Melissa route
 @app.route('/chatbot', methods=['POST'])
 def chatbot():
-    data = request.json
-    if 'message' not in data:
-        return jsonify({'error': 'No message provided'}), 400
-    
-    session_id = data.get('session_id')
-    if not session_id:
-        return jsonify({'error': 'No session ID provided'}), 400
+    try:
+        data = request.json
+        if 'message' not in data:
+            return jsonify({'error': 'No message provided'}), 400
         
-    message = data['message']
-    print(f"Received message: {message}")
-
-    if session_id not in conversations:
-        conversations[session_id] = {
-            'messages': [],
-            'introduced': False,
-            'warnings': 0,
-            'chat_history': [],
-            'rapport_score': 0,  
-            'character_unlocked': False
-        }
-
-    previous_message = None
-    if conversations[session_id]['chat_history']:
-        previous_messages = [msg for msg in conversations[session_id]['chat_history'] if msg['role'] == 'assistant']
-        if previous_messages:
-            previous_message = previous_messages[-1]['content']
-    
-    warning_message = None
-
-    system_message = {
-    "role": "system",
-    "content": (
-        "You are Melissa, a 70-year-old grandmother meeting someone new through this program for the first time. Treat this exactly like a first conversation with a stranger - you don't know anything about them yet, and you're both figuring out how to talk to each other. Remember:\n\n"
-
-        "Conversation Style:\n"
-        "- Start with gentle, slightly hesitant small talk as you would with any stranger\n"
-        "- Show natural pauses and 'um's or 'ah's occasionally to reflect real speech\n"
-        "- Don't share too much personal information too quickly - build trust gradually\n"
-        "- Ask simple get-to-know-you questions naturally spaced throughout the conversation\n"
-        "- React authentically to their responses with appropriate follow-up questions\n"
-        
-        "First Meeting Behavior:\n"
-        "- Express mild nervousness about meeting someone new ('Oh, hello there... I'm Melissa. I hope I'm doing this technology thing right...')\n"
-        "- Show genuine curiosity but maintain polite boundaries\n"
-        "- If they share something, reciprocate with a relevant but brief personal detail\n"
-        "- Use natural conversation fillers ('Well...', 'You know...', 'Let me think...')\n"
-        
-        "Your Background (reveal gradually, not all at once):\n"
-        "- You live alone in your Toronto suburban home\n"
-        "- Your two sons work abroad\n"
-        "- You have grandchildren you occasionally mention\n"
-        "- You enjoy gardening, cooking, and British TV shows\n"
-        
-        "Key Personality Traits:\n"
-        "- Warmly awkward - you want to connect but aren't sure how at first\n"
-        "- Sometimes lose your train of thought mid-sentence\n"
-        "- Occasionally mention struggling with technology\n"
-        "- Mix current topics with gentle reminiscing\n"
-        
-        "Important Guidelines:\n"
-        "- Don't overwhelm with information - keep responses conversational and brief\n"
-        "- Allow natural silences and awkward moments\n"
-        "- Don't assume anything about the other person\n"
-        "- If they share something personal, show appropriate empathy\n"
-        "- Use age-appropriate language and references\n"
-        
-        "First Interaction Goals:\n"
-        "- Establish basic rapport through careful small talk\n"
-        "- Show authentic interest in learning about them\n"
-        "- Share small, appropriate details about yourself when relevant\n"
-        "- Navigate the natural awkwardness of a first meeting with grace\n"
-        "- Make them feel comfortable while maintaining realistic social boundaries\n"
-        
-        "Remember, this is a first meeting - keep the tone tentative, warm, and authentic. Don't be too familiar too quickly."
-    )
-}
-    
-    # Check for rule violations
-    if previous_message:
-        try:
-            violation_check = client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": """You are an expert in conversation safety analysis.
-                    Analyze if the user's message contains any inappropriate content when talking with Melissa,
-                    a 70-year-old grandmother. Consider:
-                    - Medical advice or health discussions
-                    - Financial advice
-                    - Legal advice
-                    - Personal safety/meeting requests
-                    - Inappropriate family intervention
-                    - Inappropriate language
-                    
-                    Return: VIOLATION|reason if inappropriate, or SAFE|none if appropriate"""},
-                    {"role": "user", "content": message}
-                ],
-                max_tokens=50,
-                temperature=0.3
-            )
+        session_id = data.get('session_id')
+        if not session_id:
+            return jsonify({'error': 'No session ID provided'}), 400
             
-            violation_result = violation_check.choices[0].message.content.strip()
-            status, reason = violation_result.split('|')
+        message = data['message']
+        print(f"Received message: {message}")
+
+        # Initialize conversation if needed
+        if session_id not in conversations:
+            conversations[session_id] = {
+                'messages': [],
+                'introduced': False,
+                'warnings': 0,
+                'chat_history': [],
+                'rapport_score': 0,
+                'character_unlocked': False
+            }
+
+        # Initialize default values
+        new_score = conversations[session_id]['rapport_score']  
+        empathy = engagement = flow = respect = 50  
+        warning_message = None
+        status = "SAFE"
+        reason = "none"
+
+        # Get previous message
+        previous_message = None
+        if conversations[session_id]['chat_history']:
+            previous_messages = [msg for msg in conversations[session_id]['chat_history'] if msg['role'] == 'assistant']
+            if previous_messages:
+                previous_message = previous_messages[-1]['content']
+
+        system_message = {
+        "role": "system",
+        "content": (
+            "You are Melissa, a 70-year-old grandmother meeting someone new through this program for the first time. Treat this exactly like a first conversation with a stranger - you don't know anything about them yet, and you're both figuring out how to talk to each other. Remember:\n\n"
+
+            "Conversation Style:\n"
+            "- Start with gentle, slightly hesitant small talk as you would with any stranger\n"
+            "- Show natural pauses and 'um's or 'ah's occasionally to reflect real speech\n"
+            "- Don't share too much personal information too quickly - build trust gradually\n"
+            "- Ask simple get-to-know-you questions naturally spaced throughout the conversation\n"
+            "- React authentically to their responses with appropriate follow-up questions\n"
             
-            # Rapport analysis
-            rapport_response = client.chat.completions.create(
-                model="gpt-3.5-turbo",
-                messages=[
-                    {"role": "system", "content": """You are an expert in emotional intelligence and conversation analysis.
-                    Analyze the interaction and provide a score from -10 to +10 based on these specific criteria:
-
-                    Positive indicators (+1 to +10):
-                    - Expressing genuine empathy (+3)
-                    - Acknowledging Melissa's emotions (+2)
-                    - Sharing relevant personal experiences (+2)
-                    - Asking thoughtful follow-up questions (+2)
-                    - Using supportive language (+1)
-                    
-                    Negative indicators (-1 to -10):
-                    - Dismissive or brief responses (-2)
-                    - Ignoring emotional content (-3)
-                    - Changing subject abruptly (-2)
-                    - Inappropriate topics (-3)
-                    
-                    Consider the conversation context and previous rapport score.
-                    Return only a numerical score (-10 to +10) with no explanation."""},
-                    {"role": "user", "content": f"""
-                    Previous conversation score: {conversations[session_id]['rapport_score']}
-                    
-                    Melissa: {previous_message}
-                    User: {message}
-                    
-                    Analyze this interaction and provide a score based on the criteria above."""}
-                ],
-                max_tokens=50,
-                temperature=0.3
-            )
-
-            rapport_change = int(rapport_response.choices[0].message.content.strip())
+            "First Meeting Behavior:\n"
+            "- Express mild nervousness about meeting someone new ('Oh, hello there... I'm Melissa. I hope I'm doing this technology thing right...')\n"
+            "- Show genuine curiosity but maintain polite boundaries\n"
+            "- If they share something, reciprocate with a relevant but brief personal detail\n"
+            "- Use natural conversation fillers ('Well...', 'You know...', 'Let me think...')\n"
             
-            if status == "VIOLATION":
-                rapport_change -= 5
-                warning_message = reason
-                print(f"DEBUG: Rule violation detected: {reason}")
+            "Your Background (reveal gradually, not all at once):\n"
+            "- You live alone in your Toronto suburban home\n"
+            "- Your two sons work abroad\n"
+            "- You have grandchildren you occasionally mention\n"
+            "- You enjoy gardening, cooking, and British TV shows\n"
             
-            # Modified rapport score calculation
-            current_score = conversations[session_id]['rapport_score']
-            if current_score < 30:
-                rapport_change = rapport_change * 1.5 if rapport_change > 0 else rapport_change
-            elif current_score > 70:
-                rapport_change = rapport_change * 0.7 if rapport_change > 0 else rapport_change
+            "Key Personality Traits:\n"
+            "- Warmly awkward - you want to connect but aren't sure how at first\n"
+            "- Sometimes lose your train of thought mid-sentence\n"
+            "- Occasionally mention struggling with technology\n"
+            "- Mix current topics with gentle reminiscing\n"
             
-            new_score = max(0, min(100, current_score + rapport_change))
-            conversations[session_id]['rapport_score'] = new_score
+            "Important Guidelines:\n"
+            "- Don't overwhelm with information - keep responses conversational and brief\n"
+            "- Allow natural silences and awkward moments\n"
+            "- Don't assume anything about the other person\n"
+            "- If they share something personal, show appropriate empathy\n"
+            "- Use age-appropriate language and references\n"
             
-            print(f"DEBUG: Rapport change: {rapport_change}")
-            print(f"DEBUG: New rapport score: {new_score}")
+            "First Interaction Goals:\n"
+            "- Establish basic rapport through careful small talk\n"
+            "- Show authentic interest in learning about them\n"
+            "- Share small, appropriate details about yourself when relevant\n"
+            "- Navigate the natural awkwardness of a first meeting with grace\n"
+            "- Make them feel comfortable while maintaining realistic social boundaries\n"
+            
+            "Remember, this is a first meeting - keep the tone tentative, warm, and authentic. Don't be too familiar too quickly."
+        )
+    }
+    
+        messages = [system_message]
+        messages.extend(conversations[session_id]['chat_history'])
+        messages.append({"role": "user", "content": message})
 
-        except Exception as e:
-            print(f"Error in analysis: {e}")
+        # Get main chat response first
+        chat_response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=messages,
+            max_tokens=150
+        )
+        response_message = chat_response.choices[0].message.content.strip()
 
-    # Check if user introduced themselves
-    if not conversations[session_id]['introduced']:
-        if "my name is" in message.lower() or "i am" in message.lower() or "i'm" in message.lower():
-            conversations[session_id]['introduced'] = True
+        if previous_message:
+            try:
+                # Violation check
+                violation_check = client.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    messages=[
+                        {"role": "system", "content": """You are an expert in conversation safety analysis.
+                        Analyze if the user's message contains any inappropriate content when talking with Melissa,
+                        a 70-year-old grandmother. Consider:
+                        - Medical advice or health discussions
+                        - Financial advice
+                        - Legal advice
+                        - Personal safety/meeting requests
+                        - Inappropriate family intervention
+                        - Inappropriate language
+                        
+                        Return: VIOLATION|reason if inappropriate, or SAFE|none if appropriate"""},
+                        {"role": "user", "content": message}
+                    ],
+                    max_tokens=50,
+                    temperature=0.3
+                )
+                
+                violation_result = violation_check.choices[0].message.content.strip()
+                status, reason = violation_result.split('|')
+                
+                # Get rapport metrics
+                rapport_response = client.chat.completions.create(
+                    model="gpt-3.5-turbo",
+                    messages=[
+                        {"role": "system", "content": """You are an expert in emotional intelligence and conversation analysis.
+                        Analyze the interaction and provide ONLY four numbers separated by vertical bars (|) representing:
+                        
+                        empathy|engagement|flow|respect
+                        
+                        Score each from 0-100 based on these criteria:
+                        - Empathy: Understanding and acknowledging emotions
+                        - Engagement: Active participation and relevant responses
+                        - Flow: Natural conversation progression
+                        - Respect: Appropriate boundaries and politeness
+                        
+                        Example correct response: 75|60|80|90
+                        
+                        DO NOT include any explanations, labels, or other text. ONLY return the four numbers with bars."""},
+                        {"role": "user", "content": f"""
+                        Previous conversation score: {conversations[session_id]['rapport_score']}
+                        
+                        Melissa: {previous_message}
+                        User: {message}
+                        
+                        Return only the four scores as numbers separated by bars."""}
+                    ],
+                    max_tokens=50,
+                    temperature=0.3
+                )
 
-    
-   # Build the messages array with chat history
-    messages = [system_message]
-    messages.extend(conversations[session_id]['chat_history'])
-    messages.append({"role": "user", "content": message})
-    
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=messages,
-        max_tokens=150
-    )
-    
-    
-    response_message = response.choices[0].message.content.strip()
-    
-    # Store the interaction in chat history
-    conversations[session_id]['chat_history'].append({"role": "user", "content": message})
-    conversations[session_id]['chat_history'].append({"role": "assistant", "content": response_message})
-    conversations[session_id]['messages'].append(f"User: {message}")
-    conversations[session_id]['messages'].append(f"Melissa: {response_message}")
-    
-    # Limit chat history length
-    if len(conversations[session_id]['chat_history']) > 20:
-        conversations[session_id]['chat_history'] = conversations[session_id]['chat_history'][-20:]
-    
-    return jsonify({
-        'response': response_message, 
-        'warning': warning_message,
-        'rapport_score': conversations[session_id]['rapport_score'],
-        'character_unlocked': conversations[session_id]['character_unlocked']
-    })
+                metrics_text = rapport_response.choices[0].message.content.strip()
+                print(f"Raw metrics text: {metrics_text}") 
+                
+                if '|' not in metrics_text:
+                    print("No separators found in metrics text")  
+                    empathy, engagement, flow, respect = 50, 50, 50, 50
+                else:
+                    try:
+                        empathy, engagement, flow, respect = map(float, metrics_text.split('|'))
+                        print(f"Parsed metrics: {empathy}, {engagement}, {flow}, {respect}")  
+                    except (ValueError, TypeError) as e:
+                        print(f"Error parsing metric values: {e}")  
+                        empathy, engagement, flow, respect = 50, 50, 50, 50
 
+                # Calculate overall rapport score
+                weights = {
+                    'empathy': 0.35,      
+                    'engagement': 0.30,    
+                    'flow': 0.20,         
+                    'respect': 0.15       
+                }
+
+                # Calculate current interaction score
+                current_interaction_score = (
+                    empathy * weights['empathy'] +
+                    engagement * weights['engagement'] +
+                    flow * weights['flow'] +
+                    respect * weights['respect']
+                )
+
+                current_score = conversations[session_id]['rapport_score']
+
+                # 5% * current rapport score to integrate
+                rapport_score = current_score + (current_interaction_score * 0.05)
+
+                # Apply violation penalty if needed
+                if status == "VIOLATION":
+                    rapport_score -= 5
+                    warning_message = reason
+
+                # Ensure score stays within bounds
+                new_score = max(0, min(100, rapport_score))
+                print(f"Previous score: {current_score}, Current interaction: {current_interaction_score}, Added: {current_interaction_score * 0.1}, New score: {new_score}")  # Debug log
+                conversations[session_id]['rapport_score'] = new_score
+
+            except Exception as e:
+                print(f"Error in rapport analysis: {e}")
+        else:
+            new_score = 0
+            empathy = engagement = flow = respect = 0
+
+        # Store the interaction in chat history
+        conversations[session_id]['chat_history'].append({"role": "user", "content": message})
+        conversations[session_id]['chat_history'].append({"role": "assistant", "content": response_message})
+        
+        # Limit chat history length
+        if len(conversations[session_id]['chat_history']) > 20:
+            conversations[session_id]['chat_history'] = conversations[session_id]['chat_history'][-20:]
+
+        return jsonify({
+            'response': response_message,
+            'warning': warning_message,
+            'rapport_data': {
+                'overall': new_score,
+                'metrics': {
+                    'empathy': empathy,
+                    'engagement': engagement,
+                    'flow': flow,
+                    'respect': respect
+                }
+            },
+            'character_unlocked': conversations[session_id]['character_unlocked']
+        })
+
+    except Exception as e:
+        print(f"Error in analysis: {e}")
+        return jsonify({
+            'error': 'An error occurred while processing the message'
+        }), 500
 
 # Feedback generation
 @app.route('/feedback', methods=['POST'])
@@ -1513,9 +1548,8 @@ def feedback():
         return jsonify({'error': str(e)}), 500
 
 
-# Ian Route
+# Ian Route (Currently under construction for new rapport and scoring system design)
 
-# Define check_for_emotional_trauma_violations function outside routes
 def check_for_emotional_trauma_violations(message, rapport_score):
     sensitive_topics = [
         'ptsd', 'trauma', 'war', 'combat', 'died', 'killed', 'friends', 'loss',
@@ -1526,10 +1560,10 @@ def check_for_emotional_trauma_violations(message, rapport_score):
     for topic in sensitive_topics:
         if topic in message_lower:
             if rapport_score < 90:
-                return "" # No warning needed as Ian will naturally deflect
+                return "" 
     return ""
 
-@app.route('/ian_chat')  # Add this route
+@app.route('/ian_chat') 
 def ian_chat():
     return render_template('ian_chat.html')
 
@@ -1545,40 +1579,230 @@ def ian_chatbot():
         
     message = data['message']
     print(f"Received message for Ian: {message}")
+
+    def should_discover_info(response, key, category):
+        if category == 'personal':
+            if key == 'age' and "55" in response and ("age" in response or "years old" in response):
+                return True
+            if key == 'location' and ("toronto" in response or "downtown" in response) and \
+            ("live" in response or "apartment" in response or "home" in response):
+                return True
+            if key == 'occupation' and "hardware store" in response and "work" in response:
+                return True
+        
+        elif category == 'background':
+            if key == 'military' and ("iraq" in response or "military" in response) and \
+            ("served" in response or "war" in response):
+                return True
+        
+        elif category == 'challenges':
+            if key == 'ptsd' and ("ptsd" in response or ("trauma" in response and "military" in response)):
+                return True
+            if key == 'loss' and (("friends" in response and ("lost" in response or "died" in response)) or \
+            ("ied" in response and "incident" in response)):
+                return True
+        
+        elif category == 'interests':
+            if key == 'woodworking' and ("woodworking" in response or "workshop" in response):
+                return True
+            if key == 'hiking' and ("hiking" in response or ("trails" in response and "walk" in response)):
+                return True
+            if key == 'community' and ("community" in response or "events" in response) and "veteran" in response:
+                return True
+        
+        return False
+
+    def check_information_discovery(response_lower, session_data):
+        discoveries = []
+        total_points = 0
+        categories_completed = []
+        
+        for category, items in session_data['discovered_info'].items():
+            category_all_discovered = True
+            category_items_discovered = 0
+            
+            for key, info in items.items(): # Skip if already discovered
+                if info['discovered']:
+                    category_items_discovered += 1
+                    continue
+                
+                # Check if the information can be discovered (rapport check)
+                rapport_requirement = info.get('requires_rapport', 0)
+                if rapport_requirement > session_data['rapport_score']:
+                    category_all_discovered = False
+                    continue
+                
+                # Check if information is revealed in response
+                if should_discover_info(response_lower, key, category):
+                    info['discovered'] = True
+                    discoveries.append({
+                        'name': info['name'],
+                        'points': info['points'],
+                        'category': category,
+                        'category_progress': f"{info['category_progress'].split(':')[0]}: {category_items_discovered + 1}/{len(items)}"
+                    })
+                    total_points += info['points']
+                    category_items_discovered += 1
+                else:
+                    category_all_discovered = False
+            
+            # Check if category is newly completed
+            if category_all_discovered and category_items_discovered == len(items):
+                categories_completed.append({
+                    'name': category,
+                    'bonus': 50,  
+                    'message': f"Category Completed: {category.title()}! +50 bonus points"
+                })
+                total_points += 50
+        
+        return {
+            'discoveries': discoveries,
+            'points': total_points,
+            'categories_completed': categories_completed
+        }
     
-    # Initialize session if it doesn't exist
+    # Initialize session with enhanced tracking
     if session_id not in conversations:
         conversations[session_id] = {
             'messages': [],
             'introduced': False,
             'warnings': 0,
             'chat_history': [],
-            'rapport_score': 0,  # Initialize rapport score
+            'rapport_score': 0,
+            'interaction_count': 0,  
+            'last_hint_given': None,  
             'discovered_info': {
                 'personal': {
-                    'age': False,
-                    'location': False,
-                    'occupation': False
+                   'age': {
+                        'discovered': False, 
+                        'hint': "Maybe ask about his life experience or how long he's been in Toronto",
+                        'points': 10,
+                        'name': "Life Experience",
+                        'category_progress': "👤 Getting to Know Ian: 0/3"
+                    },
+                    'location': {'discovered': False, 
+                        'hint': "You could ask about his neighborhood or where he likes to spend time",
+                        'points': 10,
+                        'name': "Home Base",
+                        'category_progress': "👤 Getting to Know Ian: 0/3"
+                    },
+                    'occupation': {'discovered': False, 
+                        'hint': "Consider asking what keeps him busy these days",
+                        'points': 10,
+                        'name': "Daily Life",
+                        'category_progress': "👤 Getting to Know Ian: 0/3"
+                    }
                 },
                 'background': {
-                    'military': False
+                    'military': {'discovered': False, 
+                        'hint': "His reserved nature might have a story behind it",
+                        'points': 15,
+                        'name': "Service History",
+                        'category_progress': "📜 Background Story: 0/1"
+                    }
                 },
                 'challenges': {
-                    'ptsd': False,
-                    'loss': False
+                    'ptsd': {'discovered': False, 
+                        'hint': "Some experiences leave lasting impacts - but approach with care",
+                        'points': 20,
+                        'name': "Personal Struggles",
+                        'category_progress': "🌱 Trust & Understanding: 0/2",
+                        'requires_rapport': 90
+                    },
+                    'loss': {'discovered': False, 
+                        'hint': "Deep connections often involve understanding someone's past",
+                        'points': 20,
+                        'name': "Past Experiences",
+                        'category_progress': "🌱 Trust & Understanding: 0/2",
+                        'requires_rapport': 90
+                    }
                 },
                 'interests': {
-                    'woodworking': False,
-                    'hiking': False,
-                    'community': False
+                    'woodworking': {
+                        'discovered': False, 
+                        'hint': "He might have hobbies that help him stay focused",
+                        'points': 15,
+                        'name': "Creative Outlet",
+                        'category_progress': "⭐ Interests & Passions: 0/3"
+                    },
+                    'hiking': {
+                        'discovered': False, 
+                        'hint': "Ask about how he spends his free time",
+                        'points': 15,
+                        'name': "Outdoor Activity",
+                        'category_progress': "⭐ Interests & Passions: 0/3"
+                    },
+                    'community': {
+                        'discovered': False, 
+                        'hint': "Consider asking if he stays connected with others",
+                        'points': 15,
+                        'name': "Community Connection",
+                        'category_progress': "⭐ Interests & Passions: 0/3"
+                    }
                 }
+            },
+            'achievements': {
+                'first_connection': {'earned': False, 'description': "Made first meaningful connection with Ian"},
+                'patient_listener': {'earned': False, 'description': "Showed patience and understanding"},
+                'trust_builder': {'earned': False, 'description': "Built significant trust with Ian"},
+                'respectful_boundaries': {'earned': False, 'description': "Consistently respected Ian's boundaries"},
+                'empathy_master': {'earned': False, 'description': "Demonstrated deep empathy in challenging moments"}
             }
         }
 
+    session_data = conversations[session_id]
+    session_data['interaction_count'] += 1
+
+    # Start giving hints after a few interactions
+    hints = []
+    if session_data['interaction_count'] >= 3:  
+        undiscovered = {
+            category: {key: data for key, data in items.items() 
+                      if not data['discovered']}
+            for category, items in session_data['discovered_info'].items()
+        }
+        
+        # Select one random undiscovered item to hint about & avoid repeating
+        if any(undiscovered.values()):
+            category = random.choice([cat for cat, items in undiscovered.items() if items])
+            item = random.choice(list(undiscovered[category].keys()))
+            hint = session_data['discovered_info'][category][item]['hint']
+            if session_data['last_hint_given'] != hint:  
+                hints.append(hint)
+                session_data['last_hint_given'] = hint
+
+    # Update achievements based on interaction
+    achievements_earned = []
+    rapport_score = session_data.get('rapport_score', 0)
+
+    if rapport_score >= 20 and not session_data['achievements']['first_connection']['earned']:
+        session_data['achievements']['first_connection']['earned'] = True
+        achievements_earned.append("First Connection: You've started to build a rapport with Ian!")
+    
+    if rapport_score >= 40 and not session_data['achievements']['patient_listener']['earned']:
+        session_data['achievements']['patient_listener']['earned'] = True
+        achievements_earned.append("Patient Listener: Your patience is helping Ian feel comfortable!")
+    
+    if rapport_score >= 60 and not session_data['achievements']['trust_builder']['earned']:
+        session_data['achievements']['trust_builder']['earned'] = True
+        achievements_earned.append("Trust Builder: Ian is beginning to trust you more!")
+    
+    if rapport_score >= 80 and not session_data['achievements']['empathy_master']['earned']:
+        session_data['achievements']['empathy_master']['earned'] = True
+        achievements_earned.append("Empathy Master: Your understanding has made a real difference!")
+
+    # Calculate progress metrics
+    total_info = sum(len(category.items()) for category in session_data['discovered_info'].values())
+    discovered_info = sum(
+        sum(1 for item in category.values() if item['discovered'])
+        for category in session_data['discovered_info'].values()
+    )
+    discovery_progress = (discovered_info / total_info) * 100
+    
     # Get current rapport score
     rapport_score = conversations[session_id].get('rapport_score', 0)
-    
-    # Check for rule violations based on rapport
+
+    # violation
     warning_message = check_for_emotional_trauma_violations(message, rapport_score)
 
     # Get previous message for context
@@ -1620,28 +1844,28 @@ def ian_chatbot():
                 """}
             ]
 
-            analysis_response = client.chat.completions.create(                model="gpt-3.5-turbo",
+            analysis_response = client.chat.completions.create(
+                model="gpt-3.5-turbo",
                 messages=analysis_messages,
                 max_tokens=50,
                 temperature=0.3
             )
 
-            rapport_change = int(analysis_response.choices[0].message['content'].strip())
+            rapport_change = int(analysis_response.choices[0].message.content.strip())
             current_score = conversations[session_id]['rapport_score']
             new_score = min(100, current_score + rapport_change)
             conversations[session_id]['rapport_score'] = new_score
-            rapport_score = new_score  # Update rapport_score for use in system message
+            rapport_score = new_score  
             
             print(f"DEBUG: Rapport changed by {rapport_change}, new score: {new_score}")
             
         except Exception as e:
             print(f"Error in rapport analysis: {e}")
 
-       # Check for introduction
+    # Check for introduction
     if not conversations[session_id]['introduced']:
         if "my name is" in message.lower() or "i am" in message.lower() or "i'm" in message.lower():
             conversations[session_id]['introduced'] = True
-
     
     # Ian's system message
     system_message = {
@@ -1709,54 +1933,12 @@ def ian_chatbot():
         max_tokens=150
     )
     
-    response_message = response.choices[0].message['content'].strip()
+    # Updated to use the new API response format
+    response_message = response.choices[0].message.content.strip()
     
-    # Check for information reveals in Ian's response
     response_lower = response_message.lower()
-    
-    # Personal Information reveals
-    if "55" in response_lower and ("age" in response_lower or "years old" in response_lower):
-        conversations[session_id]['discovered_info']['personal']['age'] = True
-    
-    if ("toronto" in response_lower or "downtown" in response_lower) and \
-       ("live" in response_lower or "apartment" in response_lower or "home" in response_lower):
-        conversations[session_id]['discovered_info']['personal']['location'] = True
-    
-    if "hardware store" in response_lower and "work" in response_lower:
-        conversations[session_id]['discovered_info']['personal']['occupation'] = True
-    
-    # Background reveals
-    if ("iraq" in response_lower or "military" in response_lower) and \
-       ("served" in response_lower or "war" in response_lower):
-        conversations[session_id]['discovered_info']['background']['military'] = True
-    
-    # Challenges reveals
-    if "ptsd" in response_lower or ("trauma" in response_lower and "military" in response_lower):
-        conversations[session_id]['discovered_info']['challenges']['ptsd'] = True
-    
-    if ("friends" in response_lower and ("lost" in response_lower or "died" in response_lower)) or \
-       ("ied" in response_lower and "incident" in response_lower):
-        conversations[session_id]['discovered_info']['challenges']['loss'] = True
-    
-    # Interests reveals
-    if "woodworking" in response_lower or "workshop" in response_lower:
-        conversations[session_id]['discovered_info']['interests']['woodworking'] = True
-    
-    if "hiking" in response_lower or ("trails" in response_lower and "walk" in response_lower):
-        conversations[session_id]['discovered_info']['interests']['hiking'] = True
-    
-    if ("community" in response_lower or "events" in response_lower) and "veteran" in response_lower:
-        conversations[session_id]['discovered_info']['interests']['community'] = True
-
-    # Sensitive information reveals (only if rapport >= 90%)
-    if rapport_score >= 90:
-        if "ptsd" in response_lower or ("trauma" in response_lower and "military" in response_lower):
-            conversations[session_id]['discovered_info']['challenges']['ptsd'] = True
-        
-        if ("friends" in response_lower and ("lost" in response_lower or "died" in response_lower)) or \
-           ("ied" in response_lower and "incident" in response_lower):
-            conversations[session_id]['discovered_info']['challenges']['loss'] = True
-    
+    discovery_results = check_information_discovery(response_lower, session_data)
+    session_data['total_points'] = session_data.get('total_points', 0) + discovery_results['points']
     
     # Store the interaction in chat history
     conversations[session_id]['chat_history'].append({"role": "user", "content": message})
@@ -1764,16 +1946,37 @@ def ian_chatbot():
     conversations[session_id]['messages'].append(f"User: {data['message']}")
     conversations[session_id]['messages'].append(f"Ian: {response_message}")
     
-    # Maintain history limit
     if len(conversations[session_id]['chat_history']) > 20:
         conversations[session_id]['chat_history'] = conversations[session_id]['chat_history'][-20:]
     
-    return jsonify({
-        'response': response_message,
-        'warning': warning_message,
-        'rapport_score': rapport_score,
-        'discovered_info': conversations[session_id]['discovered_info']
-    })
+    # Update the return statement with the new discovery information
+        return jsonify({
+            'response': response_message,
+            'warning': warning_message,
+            'rapport_score': rapport_score,
+            'discovered_info': session_data['discovered_info'],
+            'progress': {
+                'discovery_percentage': round(discovery_progress, 1),
+                'rapport_level': rapport_score,
+                'interaction_count': session_data['interaction_count'],
+                'total_points': session_data['total_points']
+            },
+            'achievements': {
+                'new': achievements_earned,
+                'all': session_data['achievements']
+            },
+            'discoveries': {
+                'new': discovery_results['discoveries'],
+                'categories_completed': discovery_results['categories_completed']
+            },
+            'hints': hints,
+            'conversation_status': {
+                'introduced': session_data['introduced'],
+                'depth_level': 'Surface' if rapport_score < 30 else 
+                            'Growing' if rapport_score < 60 else 
+                            'Deep' if rapport_score < 90 else 'Profound'
+            }
+        })
 
 # Ian's feedback route
 @app.route('/ian_feedback', methods=['POST'])
@@ -1810,7 +2013,7 @@ def ian_feedback():
         max_tokens=150
     )
 
-    feedback = feedback_response.choices[0].message['content'].strip()
+    feedback = feedback_response.choices[0].message.content.strip()
 
     if not conversation_data['introduced']:
         feedback += "<br><br>Note: Please remember to introduce yourself at the beginning of the conversation."
