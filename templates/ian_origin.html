@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat with Ian | CompanionLink</title>
+    <link href="https://fonts.googleapis.com/css2?family=Helvetica+Neue:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-black: #000000;
+            --primary-red: #FF0000;
+            --background: #FFFFFF;
+            --grid-color: #E5E5E5;
+            --spacing: 1.5rem;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+        }
+
+        body {
+            background: var(--background);
+            min-height: 100vh;
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Grid Background */
+        body::before {
+            content: '';
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
+                linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
+            background-size: 24px 24px;
+            z-index: -1;
+            opacity: 0.4;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 300px 1fr;
+            gap: 0;
+            height: 100vh;
+            max-width: 1600px;
+            margin: 0 auto;
+            overflow: hidden;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            background: var(--background);
+            border-right: 2px solid var(--primary-black);
+            padding: var(--spacing);
+            overflow-y: auto;
+        }
+
+        .profile-header {
+            margin-bottom: calc(var(--spacing) * 2);
+        }
+
+        .profile-title {
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: -1px;
+            line-height: 1;
+            margin-bottom: var(--spacing);
+        }
+
+        .info-section {
+            display: grid;
+            gap: var(--spacing);
+        }
+
+        .info-item {
+            opacity: 0;
+            transform: translateX(-10px);
+            animation: slideIn 0.5s forwards;
+        }
+        @keyframes slideIn {
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .info-label {
+            text-transform: uppercase;
+            font-size: 0.875rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .info-value {
+            padding: 0.5rem;
+            margin-bottom: 0.25rem;
+            border-left: 3px solid transparent;
+            transition: border-color 0.3s ease;
+        }
+
+        .info-value.new-reveal {
+            border-left-color: var(--primary-red);
+        }
+
+        .info-category {
+            margin-bottom: 1.5rem;
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.5s ease;
+        }
+
+        .info-category.revealed {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .info-value {
+            font-size: 1rem;
+            line-height: 1.5;
+            padding: 0.5rem 0;
+            border-bottom: 1px solid #eee;
+        }
+
+.locked-message {
+    text-align: center;
+    padding: 1rem;
+    color: #666;
+    font-style: italic;
+}
+
+        /* Chat Area */
+        .chat-area {
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+            background: var(--background);
+            position: relative;
+            max-height: 100vh;
+            overflow: hidden;
+        }
+
+        .chat-header {
+            padding: var(--spacing);
+            border-bottom: 2px solid var(--primary-black);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .header-title {
+            font-size: 1.5rem;
+            text-transform: uppercase;
+            font-weight: 700;
+        }
+
+        .messages-container {
+            padding: var(--spacing);
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing);
+            height: 100%;
+            max-height: calc(100vh - 160px);
+        }
+
+        .message {
+            max-width: 70%;
+            padding: 1rem;
+            position: relative;
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+
+        .user {
+            margin-left: auto;
+            background: var(--primary-black);
+            color: var(--background);
+        }
+
+        .bot {
+            margin-right: auto;
+            border: 2px solid var(--primary-black);
+        }
+
+        .input-area {
+            border-top: 2px solid var(--primary-black);
+            padding: var(--spacing);
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: var(--spacing);
+        }
+
+        textarea {
+            border: 2px solid var(--primary-black);
+            padding: 0.75rem;
+            font-size: 1rem;
+            resize: none;
+            min-height: 45px;
+        }
+
+        button {
+            background: var(--primary-black);
+            color: var(--background);
+            border: none;
+            padding: 0 2rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: var(--primary-red);
+        }
+
+        .warning {
+            position: absolute;
+            bottom: 100px;
+            left: var(--spacing);
+            right: var(--spacing);
+            background: var(--primary-red);
+            color: var(--background);
+            padding: 1rem;
+            display: none;
+        }
+
+        #feedback {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--background);
+            padding: calc(var(--spacing) * 2);
+            border: 2px solid var(--primary-black);
+            text-align: center;
+            display: none;
+        }
+
+        .feedback-modal {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--background);
+            padding: 2rem;
+            border: 2px solid var(--primary-black);
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            display: none;
+        }
+
+        .feedback-content {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .feedback-title {
+            font-size: 1.75rem;
+            font-weight: 700;
+            padding-bottom: 1rem;
+            border-bottom: 2px solid var(--primary-black);
+        }
+
+        .discovery-summary {
+            background: #f5f5f5;
+            padding: 1rem;
+            border-radius: 4px;
+        }
+
+.discovery-stats {
+    font-size: 1.25rem;
+    font-weight: 500;
+    margin: 1rem 0;
+    text-align: center;
+}
+
+.info-category {
+    margin: 1rem 0;
+}
+
+.info-category h4 {
+    font-size: 1.1rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+}
+
+.info-item {
+    padding: 0.5rem;
+    margin: 0.25rem 0;
+    border-radius: 4px;
+    opacity: 0.5;
+}
+
+.info-item.discovered {
+    opacity: 1;
+    background: #e8f4ff;
+    border-left: 3px solid #2563eb;
+    font-weight: 500;
+}
+
+.feedback-section {
+    background: white;
+    padding: 1.5rem;
+    border: 1px solid #eee;
+    border-radius: 4px;
+}
+
+.feedback-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 1rem;
+}
+
+.return-button {
+    padding: 0.75rem 2rem;
+}
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                display: none;
+            }
+
+            .chat-area {
+                height: 100vh;
+            }
+        }
+
+        .timestamp {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            color: #666;
+            margin-top: 0.25rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <aside class="sidebar">
+            <div class="profile-header">
+                <h1 class="profile-title">Ian</h1>
+                <p class="discovery-status">Getting to know Ian...</p>
+            </div>
+        
+            <div id="discovered-info" class="info-section">
+                <!-- Information will be revealed here -->
+            </div>
+        
+            <div id="locked-message" class="locked-message">
+                <p>Chat with Ian to learn more about him...</p>
+            </div>
+        </aside>
+
+        <main class="chat-area">
+            <header class="chat-header">
+                <h2 class="header-title">Chat Session</h2>
+                <button onclick="endChat()">End Chat</button>
+            </header>
+
+            <div class="messages-container" id="messages"></div>
+
+            <div id="warning" class="warning"></div>
+
+            <div class="input-area">
+                <textarea 
+                    id="message" 
+                    placeholder="Type your message..." 
+                    onkeydown="if(event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); sendMessage(); }">
+                </textarea>
+                <button onclick="sendMessage()">Send</button>
+            </div>
+        </main>
+    </div>
+
+    <div id="feedback" class="feedback-modal">
+        <div class="feedback-content">
+            <h2 class="feedback-title">Session Summary</h2>
+            
+            <div class="discovery-summary">
+                <h3>Information Discovered</h3>
+                <div class="discovery-stats">
+                    <span id="discovered-count">0</span>/<span id="total-items">0</span> pieces of information discovered
+                </div>
+                
+                <div class="all-information">
+                    <div class="info-category">
+                        <h4>Personal Information</h4>
+                        <ul>
+                            <li id="age-info" class="info-item">Age: 55 years old</li>
+                            <li id="location-info" class="info-item">Location: Downtown Toronto</li>
+                            <li id="occupation-info" class="info-item">Occupation: Hardware store employee</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="info-category">
+                        <h4>Background</h4>
+                        <ul>
+                            <li id="military-info" class="info-item">Military: Veteran (Iraq War)</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="info-category">
+                        <h4>Personal Struggles</h4>
+                        <ul>
+                            <li id="ptsd-info" class="info-item">PTSD from service</li>
+                            <li id="loss-info" class="info-item">Lost close friends in service</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="info-category">
+                        <h4>Hobbies & Interests</h4>
+                        <ul>
+                            <li id="woodworking-info" class="info-item">Woodworking</li>
+                            <li id="hiking-info" class="info-item">Hiking</li>
+                            <li id="community-info" class="info-item">Organizing veteran events</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+    
+            <div class="feedback-section">
+                <h3>Conversation Feedback</h3>
+                <p id="feedback-message"></p>
+            </div>
+            
+            <div class="feedback-actions">
+                <button onclick="window.location.href='/'" class="return-button">Return to Home</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const sessionId = Date.now().toString();
+        const messagesContainer = document.getElementById('messages');
+
+        function getTimeString() {
+            return new Date().toLocaleTimeString('en-US', { 
+                hour12: false, 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            });
+        }
+
+        const discoverableInfo = {
+            "personal": {
+                title: "Personal Information",
+                items: {
+                    "age": {
+                value: "55 years old",
+                discovered: false
+                    },
+                    "location": {
+                        value: "Downtown Toronto",
+                        discovered: false
+                    },
+                    "occupation": {
+                        value: "Hardware store employee",
+                        discovered: false
+                    }
+                }
+            },
+            "background": {
+                title: "Background",
+                items: {
+                    "military": {
+                        value: "Veteran (Iraq War)",
+                        discovered: false
+                    }
+                }
+            },
+            "challenges": {
+                title: "Personal Struggles",
+                items: {
+                    "ptsd": {
+                        value: "Lives with PTSD",
+                        discovered: false
+                    },
+                    "loss": {
+                        value: "Lost close friends in service",
+                        discovered: false
+                    }
+                }
+            },
+            "interests": {
+                title: "Hobbies & Interests",
+                items: {
+                    "woodworking": {
+                    value: "Woodworking",
+                        discovered: false
+                    },
+                    "hiking": {
+                        value: "Hiking",
+                        discovered: false
+                    },
+                    "community": {
+                        value: "Organizing veteran events",
+                        discovered: false
+                    }
+                }
+            }
+        };
+
+// Function to check Ian's responses for information reveals
+function checkResponseForReveals(response) {
+    const lowerResponse = response.toLowerCase();
+    
+    // Personal Information reveals
+    if (lowerResponse.includes("55") && (lowerResponse.includes("age") || lowerResponse.includes("old"))) {
+        revealInfo("personal", "age");
+    }
+    
+    if ((lowerResponse.includes("toronto") || lowerResponse.includes("downtown")) && 
+        (lowerResponse.includes("live") || lowerResponse.includes("home") || lowerResponse.includes("apartment"))) {
+        revealInfo("personal", "location");
+    }
+    
+    if (lowerResponse.includes("hardware store") && lowerResponse.includes("work")) {
+        revealInfo("personal", "occupation");
+    }
+    
+    // Background reveals
+    if (lowerResponse.includes("iraq") || (lowerResponse.includes("military") && lowerResponse.includes("served"))) {
+        revealInfo("background", "military");
+    }
+    
+    // Challenges reveals
+    if (lowerResponse.includes("ptsd") || (lowerResponse.includes("trauma"))) {
+        revealInfo("challenges", "ptsd");
+    }
+    
+    if (lowerResponse.includes("friends") && (lowerResponse.includes("lost") || lowerResponse.includes("died"))) {
+        revealInfo("challenges", "loss");
+    }
+    
+    // Individual hobby reveals
+    if (lowerResponse.includes("woodworking") || lowerResponse.includes("workshop")) {
+        revealInfo("interests", "woodworking");
+    }
+    
+    if (lowerResponse.includes("hiking") || lowerResponse.includes("trails")) {
+        revealInfo("interests", "hiking");
+    }
+    
+    if (lowerResponse.includes("community") || lowerResponse.includes("veteran") && lowerResponse.includes("event")) {
+        revealInfo("interests", "community");
+    }
+}
+
+function revealInfo(category, item) {
+    if (!discoverableInfo[category].items[item].discovered) {
+        discoverableInfo[category].items[item].discovered = true;
+        updateSidebar();
+    }
+}
+
+function updateSidebar() {
+    const container = document.getElementById('discovered-info');
+    container.innerHTML = '';
+    
+    for (const category in discoverableInfo) {
+        const discoveredItems = Object.entries(discoverableInfo[category].items)
+            .filter(([_, item]) => item.discovered);
+            
+        if (discoveredItems.length > 0) {
+            const categorySection = document.createElement('div');
+            categorySection.className = 'info-category revealed';
+            
+            const itemsHtml = discoveredItems
+                .map(([_, item]) => `
+                    <div class="info-item">
+                        <div class="info-value">${item.value}</div>
+                    </div>
+                `)
+                .join('');
+            
+            categorySection.innerHTML = `
+                <h2 class="info-category-title">${discoverableInfo[category].title}</h2>
+                ${itemsHtml}
+            `;
+            
+            container.appendChild(categorySection);
+        }
+    }
+}
+
+        async function sendMessage() {
+            const messageInput = document.getElementById('message');
+            const message = messageInput.value.trim();
+            
+            if (!message) return;
+
+            appendMessage(message, 'user');
+            messageInput.value = '';
+
+            try {
+                const response = await fetch('/ian_chatbot', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message, session_id: sessionId })
+                });
+
+                const data = await response.json();
+        
+            if (data.response) {
+                    appendMessage(data.response, 'bot');
+                checkResponseForReveals(data.response);  // Check Ian's response for reveals
+            }
+        } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+        function appendMessage(content, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.innerHTML = `
+                ${content}
+                <div class="timestamp">${getTimeString()}</div>
+            `;
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        async function endChat() {
+    try {
+        const response = await fetch('/ian_feedback', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_id: sessionId })
+        });
+
+        const data = await response.json();
+        
+        // feedback message
+        document.getElementById('feedback-message').innerHTML = data.feedback || 'No feedback available.';
+        
+        // discovered information
+        if (data.discovered_info) {
+            let discoveredCount = 0;
+            const discoveredInfo = data.discovered_info;
+            
+            // Personal Information
+            Object.entries(discoveredInfo.personal).forEach(([key, discovered]) => {
+                const element = document.getElementById(`${key}-info`);
+                if (element && discovered) {
+                    element.classList.add('discovered');
+                    discoveredCount++;
+                }
+            });
+            
+            // Background
+            Object.entries(discoveredInfo.background).forEach(([key, discovered]) => {
+                const element = document.getElementById(`${key}-info`);
+                if (element && discovered) {
+                    element.classList.add('discovered');
+                    discoveredCount++;
+                }
+            });
+            
+            // Challenges
+            Object.entries(discoveredInfo.challenges).forEach(([key, discovered]) => {
+                const element = document.getElementById(`${key}-info`);
+                if (element && discovered) {
+                    element.classList.add('discovered');
+                    discoveredCount++;
+                }
+            });
+            
+            // Interests
+            Object.entries(discoveredInfo.interests).forEach(([key, discovered]) => {
+                const element = document.getElementById(`${key}-info`);
+                if (element && discovered) {
+                    element.classList.add('discovered');
+                    discoveredCount++;
+                }
+            });
+
+            // discovery stats
+            const totalItems = document.querySelectorAll('.info-item').length;
+            document.getElementById('discovered-count').textContent = discoveredCount;
+            document.getElementById('total-items').textContent = totalItems;
+        }
+
+        // Show feedback modal
+        document.getElementById('feedback').style.display = 'block';
+        document.querySelector('.container').style.display = 'none';
+    } catch (error) {
+        console.error('Error:', error);
+    }
+}
+
+        document.getElementById('message').focus();
+    </script>
+</body>
+</html>

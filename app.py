@@ -1175,7 +1175,7 @@ def voice_chat():
                 "- React authentically to their responses with appropriate follow-up questions\n"
                 
                 "First Meeting Behavior:\n"
-                "- Express mild nervousness about meeting someone new ('Oh, hello there... I'm Melissa. I hope I'm doing this technology thing right...')\n"
+                "- Express mild nervousness about meeting someone new ('Oh, hello there... I hope I'm doing this technology thing right...')\n"
                 "- Show genuine curiosity but maintain polite boundaries\n"
                 "- If they share something, reciprocate with a relevant but brief personal detail\n"
                 "- Use natural conversation fillers ('Well...', 'You know...', 'Let me think...')\n"
@@ -1315,7 +1315,7 @@ def chatbot():
             "- React authentically to their responses with appropriate follow-up questions\n"
             
             "First Meeting Behavior:\n"
-            "- Express mild nervousness about meeting someone new ('Oh, hello there... I'm Melissa. I hope I'm doing this technology thing right...')\n"
+            "- Express mild nervousness about meeting someone new ('Oh, hello there... I hope I'm doing this technology thing right...')\n"
             "- Show genuine curiosity but maintain polite boundaries\n"
             "- If they share something, reciprocate with a relevant but brief personal detail\n"
             "- Use natural conversation fillers ('Well...', 'You know...', 'Let me think...')\n"
@@ -1582,7 +1582,7 @@ def ian_chatbot():
 
     def should_discover_info(response, key, category):
         if category == 'personal':
-            if key == 'age' and "55" in response and ("age" in response or "years old" in response):
+            if key == 'age' and "55" in response and ("55" in response or "years old" in response):
                 return True
             if key == 'location' and ("toronto" in response or "downtown" in response) and \
             ("live" in response or "apartment" in response or "home" in response):
@@ -1591,8 +1591,11 @@ def ian_chatbot():
                 return True
         
         elif category == 'background':
-            if key == 'military' and ("iraq" in response or "military" in response) and \
-            ("served" in response or "war" in response):
+            if key == 'veteran' and ("military" in response or "veteran" in response):
+                return True
+            if key == 'service' and ("served" in response or "overseas" in response):
+                return True
+            if key == 'iraq' and "iraq" in response:
                 return True
         
         elif category == 'challenges':
@@ -1607,7 +1610,7 @@ def ian_chatbot():
                 return True
             if key == 'hiking' and ("hiking" in response or ("trails" in response and "walk" in response)):
                 return True
-            if key == 'community' and ("community" in response or "events" in response) and "veteran" in response:
+            if key == 'community' and ("veteran" in response) and ("community" in response or "events" in response or "activities" in response):
                 return True
         
         return False
@@ -1621,7 +1624,7 @@ def ian_chatbot():
             category_all_discovered = True
             category_items_discovered = 0
             
-            for key, info in items.items(): # Skip if already discovered
+            for key, info in items.items(): 
                 if info['discovered']:
                     category_items_discovered += 1
                     continue
@@ -1694,11 +1697,29 @@ def ian_chatbot():
                     }
                 },
                 'background': {
-                    'military': {'discovered': False, 
-                        'hint': "His reserved nature might have a story behind it",
-                        'points': 15,
-                        'name': "Service History",
-                        'category_progress': "📜 Background Story: 0/1"
+                    'veteran': {
+                        'discovered': False, 
+                        'hint': "His manner suggests military experience",
+                        'points': 5,
+                        'name': "Military Service",
+                        'category_progress': "📜 Background Story: 0/3",
+                        'value': "Veteran"
+                    },
+                    'service': {
+                        'discovered': False, 
+                        'hint': "You might ask about where he served",
+                        'points': 5,
+                        'name': "Service Details",
+                        'category_progress': "📜 Background Story: 0/3",
+                        'value': "Served overseas"
+                    },
+                    'iraq': {
+                        'discovered': False, 
+                        'hint': "Consider asking about specific deployments",
+                        'points': 5,
+                        'name': "Deployment Location",
+                        'category_progress': "📜 Background Story: 0/3",
+                        'value': "Served in Iraq"
                     }
                 },
                 'challenges': {
@@ -1777,19 +1798,19 @@ def ian_chatbot():
 
     if rapport_score >= 20 and not session_data['achievements']['first_connection']['earned']:
         session_data['achievements']['first_connection']['earned'] = True
-        achievements_earned.append("First Connection: You've started to build a rapport with Ian!")
+        achievements_earned.append("First Connection🙌: You've started to build a rapport with Ian!")
     
     if rapport_score >= 40 and not session_data['achievements']['patient_listener']['earned']:
         session_data['achievements']['patient_listener']['earned'] = True
-        achievements_earned.append("Patient Listener: Your patience is helping Ian feel comfortable!")
+        achievements_earned.append("Patient Listener👂: Your patience is helping Ian feel comfortable!")
     
     if rapport_score >= 60 and not session_data['achievements']['trust_builder']['earned']:
         session_data['achievements']['trust_builder']['earned'] = True
-        achievements_earned.append("Trust Builder: Ian is beginning to trust you more!")
+        achievements_earned.append("Trust Builder🤝: Ian is beginning to trust you more!")
     
     if rapport_score >= 80 and not session_data['achievements']['empathy_master']['earned']:
         session_data['achievements']['empathy_master']['earned'] = True
-        achievements_earned.append("Empathy Master: Your understanding has made a real difference!")
+        achievements_earned.append("Empathy Master🎉: Your understanding has made a real difference!")
 
     # Calculate progress metrics
     total_info = sum(len(category.items()) for category in session_data['discovered_info'].values())
@@ -1819,28 +1840,23 @@ def ian_chatbot():
                 "role": "system",
                 "content": """You are an expert in emotional intelligence and conversation analysis.
                 Analyze the emotional context of Ian's message and the user's response.
-                Rate the overall rapport building quality on a scale of 0-20, considering:
-                - Empathy: Recognition and response to emotional cues
-                - Engagement: Active participation and interest
-                - Active Listening: Understanding and reflection of the conversation
-                - Respect for Boundaries: How well they handle deflection or reluctance
-                - Trust Building: Creating a safe space for eventual sharing
+                Rate the overall rapport building quality on a scale of 0-10, considering:
+                - Empathy: Recognition and response to emotional cues (0-2 points)
+                - Engagement: Active participation and interest (0-2 points)
+                - Active Listening: Understanding and reflection (0-2 points)
+                - Respect for Boundaries: Handling deflection/reluctance (0-2 points)
+                - Trust Building: Creating a safe space (0-2 points)
                 
-                Return only a single numerical score (0-20)."""
+                Be conservative in scoring. High scores should be rare and earned through exceptional interaction.
+                Return only a single numerical score (0-10)."""
             }
+
 
             analysis_messages = [
                 analysis_prompt,
                 {"role": "user", "content": f"""
                 Ian's message: {previous_message}
                 User's response: {message}
-                
-                Consider:
-                - How well did the user recognize and respond to Ian's emotions?
-                - Did they show genuine interest and engagement?
-                - Did they demonstrate understanding and reflection?
-                - How well did they respect boundaries and build trust?
-                - Did they build upon previous conversation points?
                 """}
             ]
 
@@ -1851,9 +1867,10 @@ def ian_chatbot():
                 temperature=0.3
             )
 
-            rapport_change = int(analysis_response.choices[0].message.content.strip())
+            rapport_change = int(analysis_response.choices[0].message.content.strip().split()[0])
+            rapport_change = rapport_change * 1.5  # Multiply the change by 1.5
             current_score = conversations[session_id]['rapport_score']
-            new_score = min(100, current_score + rapport_change)
+            new_score = min(100, current_score + rapport_change)  # Remove the division by 2
             conversations[session_id]['rapport_score'] = new_score
             rapport_score = new_score  
             
@@ -1861,6 +1878,10 @@ def ian_chatbot():
             
         except Exception as e:
             print(f"Error in rapport analysis: {e}")
+            # In case of error, make a small positive change
+            current_score = conversations[session_id]['rapport_score']
+            conversations[session_id]['rapport_score'] = min(100, current_score + 2)  
+            rapport_score = conversations[session_id]['rapport_score']
 
     # Check for introduction
     if not conversations[session_id]['introduced']:
@@ -1950,33 +1971,32 @@ def ian_chatbot():
         conversations[session_id]['chat_history'] = conversations[session_id]['chat_history'][-20:]
     
     # Update the return statement with the new discovery information
-        return jsonify({
-            'response': response_message,
-            'warning': warning_message,
-            'rapport_score': rapport_score,
-            'discovered_info': session_data['discovered_info'],
-            'progress': {
-                'discovery_percentage': round(discovery_progress, 1),
-                'rapport_level': rapport_score,
-                'interaction_count': session_data['interaction_count'],
-                'total_points': session_data['total_points']
-            },
-            'achievements': {
-                'new': achievements_earned,
-                'all': session_data['achievements']
-            },
-            'discoveries': {
-                'new': discovery_results['discoveries'],
-                'categories_completed': discovery_results['categories_completed']
-            },
-            'hints': hints,
-            'conversation_status': {
-                'introduced': session_data['introduced'],
-                'depth_level': 'Surface' if rapport_score < 30 else 
-                            'Growing' if rapport_score < 60 else 
-                            'Deep' if rapport_score < 90 else 'Profound'
-            }
-        })
+    return jsonify({
+        'response': response_message,
+        'warning': warning_message, 
+        'discovered_info': session_data['discovered_info'],
+        'progress': {
+            'discovery_percentage': round(discovery_progress, 1),
+            'rapport_percentage': rapport_score,  # Changed from rapport_score to rapport_percentage
+            'interaction_count': session_data['interaction_count'],
+            'total_points': session_data['total_points']
+        },
+        'achievements': {
+            'new': achievements_earned,
+            'all': session_data['achievements']
+        },
+        'discoveries': {
+            'new': discovery_results['discoveries'],
+            'categories_completed': discovery_results['categories_completed']
+        },
+        'hints': hints,
+        'conversation_status': {
+            'introduced': session_data['introduced'],
+            'depth_level': 'Surface' if rapport_score < 30 else 
+                        'Growing' if rapport_score < 60 else 
+                        'Deep' if rapport_score < 90 else 'Profound'
+        }
+    })
 
 # Ian's feedback route
 @app.route('/ian_feedback', methods=['POST'])
