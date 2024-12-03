@@ -19,6 +19,9 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app)
 
+port = int(os.getenv('PORT', 10000))
+app.run(host='0.0.0.0', port=port)
+
 # Initialize OpenAI client
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
