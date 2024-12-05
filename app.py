@@ -1,12 +1,12 @@
 from flask import Flask, request, jsonify, render_template
 import openai as openai_old
 from openai import OpenAI 
+import httpx
 from flask_cors import CORS
 import os
 import random 
 import re
 import tempfile
-import base64
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from dotenv import load_dotenv
@@ -18,6 +18,8 @@ load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
+
+httpx.Limits(max_keepalive_connections=None, max_connections=None)
 
 port = int(os.getenv('PORT', 10000))
 
