@@ -1,5 +1,4 @@
 from flask import Flask, request, jsonify, render_template
-import openai as openai_old
 from openai import OpenAI 
 import httpx
 from flask_cors import CORS
