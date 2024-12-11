@@ -1566,6 +1566,15 @@ def check_for_emotional_trauma_violations(message, rapport_score):
                 return "" 
     return ""
 
+
+
+# The following route is disabled due to changes in API design:
+# @app.route('/example', methods=['GET', 'POST'])
+# def example_route():
+#     return "This route is disabled"
+
+
+'''
 @app.route('/ian_chat') 
 def ian_chat():
     return render_template('ian_chat.html')
@@ -2046,6 +2055,7 @@ def ian_feedback():
         'discovered_info': discovered_info
     })
 
+    '''
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=port, debug=True)
 
