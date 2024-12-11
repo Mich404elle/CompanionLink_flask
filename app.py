@@ -25,6 +25,7 @@ port = int(os.getenv('PORT', 10000))
 # Initialize OpenAI client
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
+
 # Initialize the voice handler
 voice_handler = VoiceChatHandler()    
 
@@ -896,7 +897,9 @@ def select():
 def melissa_chat():
     return render_template('melissa_chat.html')
 
+
 # Melissa Voice Chat Routes
+'''
 @app.route('/melissa_voicechat')  
 def melissa_voicechat():          
     return render_template('melissa_voicechat.html')  
@@ -1264,6 +1267,7 @@ def voice_chat():
         print(f"Voice chat error: {e}")
         return jsonify({'error': str(e)}), 500
     
+'''
 
 # Melissa route
 @app.route('/chatbot', methods=['POST'])
@@ -1501,6 +1505,7 @@ def chatbot():
             'error': 'An error occurred while processing the message'
         }), 500
 
+        
 # Feedback generation
 @app.route('/feedback', methods=['POST'])
 def feedback():
@@ -1574,7 +1579,7 @@ def check_for_emotional_trauma_violations(message, rapport_score):
 #     return "This route is disabled"
 
 
-'''
+
 @app.route('/ian_chat') 
 def ian_chat():
     return render_template('ian_chat.html')
@@ -2055,7 +2060,6 @@ def ian_feedback():
         'discovered_info': discovered_info
     })
 
-    '''
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=port, debug=True)
 
