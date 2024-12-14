@@ -1,7 +1,7 @@
 Flask==3.1.0
 Flask_Cors==5.0.0
 numpy==2.1.3
-openai==1.54.3
+openai>=1.0.0,<2.0.0  # Specify exact version to avoid conflicts
 python-dotenv==1.0.1
 scikit_learn==1.5.2
 gunicorn==23.0.0

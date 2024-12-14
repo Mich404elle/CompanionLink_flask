@@ -899,7 +899,7 @@ def melissa_chat():
 
 
 # Melissa Voice Chat Routes
-'''
+
 @app.route('/melissa_voicechat')  
 def melissa_voicechat():          
     return render_template('melissa_voicechat.html')  
@@ -1267,7 +1267,7 @@ def voice_chat():
         print(f"Voice chat error: {e}")
         return jsonify({'error': str(e)}), 500
     
-'''
+
 
 # Melissa route
 @app.route('/chatbot', methods=['POST'])
