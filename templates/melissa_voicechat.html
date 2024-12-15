@@ -597,19 +597,27 @@
     let isRecording = false;
     let currentAudio = null;
     const sessionId = Date.now().toString();
+    let recordingStream = null;
 
     // Get DOM elements
     const recordButton = document.getElementById('recordButton');
     const recordingIndicator = document.getElementById('recordingIndicator');
     const statusText = document.getElementById('statusText');
 
-    recordButton.addEventListener('click', toggleRecording);
+    recordButton.removeEventListener('click', toggleRecording);
 
     // Add keyboard shortcut for recording
-    document.addEventListener('keydown', (event) => {
-        if (event.code === 'Space') {
+    document.addEventListener('keydown', async (event) => {
+        if (event.code === 'Space' && !isRecording) {
             event.preventDefault();
-            toggleRecording();
+            await startRecording();
+        }
+    });
+
+    document.addEventListener('keyup', async (event) => {
+        if (event.code === 'Space' && isRecording) {
+            event.preventDefault();
+            await stopRecording();
         }
     });
 
@@ -638,7 +646,6 @@
             const audioData = atob(base64Audio);
             const arrayBuffer = new ArrayBuffer(audioData.length);
             const view = new Uint8Array(arrayBuffer);
-
             for (let i = 0; i < audioData.length; i++) {
                 view[i] = audioData.charCodeAt(i);
             }
@@ -659,41 +666,54 @@
                 return new Promise((resolve, reject) => {
                     audio.preload = 'auto';
 
-                    // Set up event listeners for Safari
-                    audio.addEventListener('canplaythrough', async () => {
+                    // Create a visible button for user interaction
+                    const tempButton = document.createElement('button');
+                    tempButton.textContent = "Play Response";
+                    tempButton.style.cssText = `
+                    position: fixed;
+                    bottom: 20px;
+                    right: 20px;
+                    z-index: 1000;
+                    padding: 10px 20px;
+                    background: #000;
+                    color: #fff;
+                    border: none;
+                    border-radius: 4px;
+                    cursor: pointer;
+                    font-weight: bold;
+                `;
+                    document.body.appendChild(tempButton);
+
+                    const playAttempt = async () => {
                         try {
-                            // Create and trigger user interaction
-                            const tempButton = document.createElement('button');
-                            tempButton.style.display = 'none';
-                            document.body.appendChild(tempButton);
-
-                            const playAttempt = async () => {
-                                try {
-                                    audio.src = audioUrl;
-                                    await audio.play();
-                                    tempButton.remove();
-                                    resolve();
-                                } catch (e) {
-                                    console.error('Safari playback error:', e);
-                                    reject(e);
-                                }
-                            };
-
-                            tempButton.addEventListener('click', playAttempt);
-                            tempButton.click();
-                        } catch (error) {
-                            console.error('Safari setup error:', error);
-                            reject(error);
+                            audio.src = audioUrl;
+                            await audio.play();
+                            tempButton.remove();
+                            resolve();
+                        } catch (e) {
+                            console.error('Safari playback error:', e);
+                            tempButton.remove();
+                            reject(e);
                         }
-                    }, { once: true });
+                    };
+
+                    tempButton.addEventListener('click', playAttempt);
+
+                    // Auto-remove button after 10 seconds if not clicked
+                    setTimeout(() => {
+                        if (document.body.contains(tempButton)) {
+                            tempButton.remove();
+                            reject(new Error('Playback timeout'));
+                        }
+                    }, 10000);
 
                     // Error handling
                     audio.addEventListener('error', (e) => {
                         console.error('Audio loading error:', e);
+                        tempButton.remove();
                         reject(e);
                     });
 
-                    // Set source and load
                     audio.src = audioUrl;
                     audio.load();
                 });
@@ -739,6 +759,7 @@
     async function startRecording() {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            recordingStream = stream;
             mediaRecorder = new MediaRecorder(stream);
             audioChunks = [];
 
@@ -746,24 +767,35 @@
                 audioChunks.push(event.data);
             });
 
-            mediaRecorder.addEventListener('stop', sendAudioToServer);
+            mediaRecorder.addEventListener('stop', () => {
+                stopRecordingStream();
+                sendAudioToServer();
+            });
 
             mediaRecorder.start();
             isRecording = true;
 
+            // Update UI
             recordButton.innerHTML = `
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <rect x="6" y="4" width="12" height="16"/>
-                </svg>
-                Stop Recording
-            `;
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="6" y="4" width="12" height="16"/>
+            </svg>
+            Recording...
+        `;
             recordButton.classList.add('recording');
             recordingIndicator.classList.add('recording');
-            statusText.textContent = 'Recording... Press Space to stop';
+            statusText.textContent = 'Release Space to send message';
 
         } catch (err) {
             console.error('Error accessing microphone:', err);
             showWarning('Unable to access microphone. Please ensure you have granted permission.');
+        }
+    }
+
+    function stopRecordingStream() {
+        if (recordingStream) {
+            recordingStream.getTracks().forEach(track => track.stop());
+            recordingStream = null;
         }
     }
 
@@ -774,17 +806,27 @@
 
             // Update UI
             recordButton.innerHTML = `
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-                </svg>
-                Start Recording
-            `;
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+                <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+            </svg>
+            Hold Space to Record
+        `;
             recordButton.classList.remove('recording');
             recordingIndicator.classList.remove('recording');
             statusText.textContent = 'Processing...';
         }
     }
+
+    // Update the initial button text
+    recordButton.innerHTML = `
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+        <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+    </svg>
+    Hold Space to Record
+`;
+    statusText.textContent = 'Hold Space to record';
 
     // Server communication
     async function sendAudioToServer() {
@@ -956,23 +998,7 @@
 
             const data = await response.json();
 
-            const feedbackDiv = document.getElementById('feedback');
-            const feedbackMessageDiv = document.getElementById('feedback-message');
-            const containerDiv = document.querySelector('.container');
-
-            if (data.feedback && feedbackDiv && feedbackMessageDiv) {
-                const formattedFeedback = data.feedback
-                    .split('\n\n')
-                    .map(section => `<div class="feedback-section">${section.replace(/\n/g, '<br>')}</div>`)
-                    .join('');
-
-                feedbackMessageDiv.innerHTML = formattedFeedback;
-                containerDiv.style.display = 'none';
-                feedbackDiv.style.display = 'flex';
-            } else {
-                window.location.href = '/select';
-            }
-
+            // ...rest of the function
         } catch (error) {
             console.error('Error ending chat:', error);
             showWarning('Error ending chat. Please try again.');
