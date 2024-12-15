@@ -199,14 +199,15 @@
             align-items: center;
         }
 
-        .rapport-grid {
+        /* Metrics grid layout */
+        .rapport-metrics {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 1.5rem;
-            margin-bottom: 1.5rem;
         }
 
-        .rapport-item {
+        /* Individual metric item styles */
+        .metric-item {
             position: relative;
             padding: 1rem;
             background: rgba(0, 0, 0, 0.05);
@@ -214,19 +215,44 @@
             transition: all 0.3s ease;
         }
 
-        .rapport-label {
+        .metric-item label {
             display: flex;
             align-items: center;
             gap: 0.5rem;
             margin-bottom: 0.75rem;
             font-weight: 500;
+            font-size: 0.875rem;
         }
 
-        .rapport-icon {
-            font-size: 1.2rem;
+        /* Progress bar styles */
+        .progress {
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            position: relative;
         }
 
-        .rapport-tooltip {
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, #4CAF50, #8BC34A);
+            transition: width 0.3s ease;
+            border-radius: 4px;
+        }
+
+        .progress-text {
+            position: absolute;
+            width: 100%;
+            text-align: center;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--primary-black);
+            margin-top: 0.5rem;
+        }
+
+        /* Tooltip styles */
+        .metric-tooltip {
             position: absolute;
             top: -8px;
             left: 50%;
@@ -244,34 +270,11 @@
             z-index: 1000;
         }
 
-        .rapport-label:hover .rapport-tooltip {
+        label:hover .metric-tooltip {
             opacity: 1;
         }
 
-        .rapport-bar {
-            height: 8px;
-            background: #e9ecef;
-            border-radius: 4px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .rapport-progress {
-            height: 100%;
-            background: linear-gradient(90deg, #4CAF50, #8BC34A);
-            transition: width 0.3s ease;
-            border-radius: 4px;
-            width: 0%;
-        }
-
-        .rapport-markers {
-            display: flex;
-            justify-content: space-between;
-            margin-top: 0.25rem;
-            font-size: 0.75rem;
-            color: #6c757d;
-        }
-
+        /* Suggestions section */
         .rapport-suggestions {
             margin-top: 1.5rem;
             padding: 1rem;
@@ -298,6 +301,14 @@
             font-size: 0.875rem;
             line-height: 1.5;
             color: #2e7d32;
+        }
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            .rapport-metrics {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
         }
 
         /* Voice control styles */
@@ -559,11 +570,48 @@
                     <span id="rapport-status">Building Connection...</span>
                 </h3>
                 <div class="rapport-metrics">
-                    <div class="meter-row">
-                        <div class="meter-bar">
-                            <div id="rapport-progress" class="meter-progress"></div>
+                    <div class="metric-item">
+                        <label id="empathy-label">
+                            Empathy
+                            <span class="metric-tooltip">Understanding and sharing feelings</span>
+                        </label>
+                        <div class="progress">
+                            <div class="progress-bar" id="empathy-bar"></div>
+                            <div class="progress-text">0%</div>
                         </div>
-                        <span id="rapport-value" class="meter-value">0%</span>
+                    </div>
+            
+                    <div class="metric-item">
+                        <label id="engagement-label">
+                            Engagement
+                            <span class="metric-tooltip">Active participation in conversation</span>
+                        </label>
+                        <div class="progress">
+                            <div class="progress-bar" id="engagement-bar"></div>
+                            <div class="progress-text">0%</div>
+                        </div>
+                    </div>
+            
+                    <div class="metric-item">
+                        <label id="flow-label">
+                            Flow
+                            <span class="metric-tooltip">Natural conversation rhythm</span>
+                        </label>
+                        <div class="progress">
+                            <div class="progress-bar" id="flow-bar"></div>
+                            <div class="progress-text">0%</div>
+                        </div>
+                    </div>
+            
+                    <div class="metric-item">
+                        <label id="respect-label">
+                            Respect
+                            <span class="metric-tooltip">Mutual understanding and courtesy</span>
+                        </label>
+                        <div class="progress">
+                            <div class="progress-bar" id="respect-bar"></div>
+                            <div class="progress-text">0%</div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -620,6 +668,20 @@
             await stopRecording();
         }
     });
+
+    function updateMetric(metricId, score) {
+        const bar = document.getElementById(`${metricId}-bar`);
+        const progress = bar.parentElement;
+        const text = progress.querySelector('.progress-text');
+
+        bar.style.width = `${score}%`;
+        text.textContent = `${score}%`;
+        progress.setAttribute('aria-valuenow', score);
+    }
+
+    function updateMetricIcon(metricId, score) {
+        updateMetric(metricId.replace('-metric', ''), score);
+    }
 
     // Audio control functions
     function stopCurrentAudio() {
@@ -880,9 +942,18 @@
                 }
             }
 
-            // Update rapport 
-            if (typeof chatData.rapport_score === 'number') {
-                updateRapportMeter(chatData.rapport_score);
+            // Rapport 
+            if (chatData.rapport_data) {
+                // Metrics icons
+                updateMetricIcon('empathy', chatData.rapport_data.metrics.empathy);
+                updateMetricIcon('engagement', chatData.rapport_data.metrics.engagement);
+                updateMetricIcon('flow', chatData.rapport_data.metrics.flow);
+                updateMetricIcon('respect', chatData.rapport_data.metrics.respect);
+
+                // Overall rapport
+                if (chatData.rapport_data.overall) {
+                    updateRapportMeter(chatData.rapport_data.overall);
+                }
             }
 
             // warnings
