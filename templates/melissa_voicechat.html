@@ -580,7 +580,7 @@
                             <div class="progress-text">0%</div>
                         </div>
                     </div>
-            
+
                     <div class="metric-item">
                         <label id="engagement-label">
                             Engagement
@@ -591,7 +591,7 @@
                             <div class="progress-text">0%</div>
                         </div>
                     </div>
-            
+
                     <div class="metric-item">
                         <label id="flow-label">
                             Flow
@@ -602,7 +602,7 @@
                             <div class="progress-text">0%</div>
                         </div>
                     </div>
-            
+
                     <div class="metric-item">
                         <label id="respect-label">
                             Respect
@@ -644,13 +644,26 @@
     let audioChunks = [];
     let isRecording = false;
     let currentAudio = null;
-    const sessionId = Date.now().toString();
     let recordingStream = null;
+    // At the top of your script, modify the session ID initialization:
+    const sessionId = (() => {
+        // Try to get existing session ID from localStorage
+        const existingSession = localStorage.getItem('currentChatSession');
+        if (existingSession) {
+            return existingSession;
+        }
+        // Create new session ID if none exists
+        const newSession = Date.now().toString();
+        localStorage.setItem('currentChatSession', newSession);
+        return newSession;
+    })();
+
 
     // Get DOM elements
     const recordButton = document.getElementById('recordButton');
     const recordingIndicator = document.getElementById('recordingIndicator');
     const statusText = document.getElementById('statusText');
+
 
     recordButton.removeEventListener('click', toggleRecording);
 
@@ -895,9 +908,10 @@
         const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
         const formData = new FormData();
         formData.append('audio', audioBlob);
+        formData.append('session_id', sessionId); // Add session ID
 
         try {
-            console.log('Sending audio for transcription...');
+            console.log('Sending audio for transcription with session ID:', sessionId);
             const transcribeResponse = await fetch('/transcribe', {
                 method: 'POST',
                 body: formData
@@ -1048,9 +1062,16 @@
 
     async function endChat() {
         try {
-            stopCurrentAudio(); // Stop playing when recording starts
+            stopCurrentAudio();
             console.log('Starting end chat process...');
             console.log('Using session ID:', sessionId);
+
+            // Check if we have any messages before ending
+            const messagesContainer = document.getElementById('messages');
+            if (!messagesContainer || messagesContainer.children.length === 0) {
+                showWarning('Please have at least one conversation before ending the chat.');
+                return;
+            }
 
             const response = await fetch('/feedback', {
                 method: 'POST',
@@ -1062,19 +1083,43 @@
                 })
             });
 
+            const textResponse = await response.text();
+            console.log('Raw feedback response:', textResponse);
+
             if (!response.ok) {
-                const data = await response.json();
-                throw new Error(data.error || 'Failed to end chat');
+                throw new Error(`Failed to end chat: ${response.status} ${textResponse}`);
             }
 
-            const data = await response.json();
+            const data = JSON.parse(textResponse);
 
-            // ...rest of the function
+            const feedbackDiv = document.getElementById('feedback');
+            const feedbackMessageDiv = document.getElementById('feedback-message');
+            const containerDiv = document.querySelector('.container');
+
+            if (data.feedback && feedbackDiv && feedbackMessageDiv) {
+                const formattedFeedback = data.feedback
+                    .split('\n\n')
+                    .map(section => `<div class="feedback-section">${section.replace(/\n/g, '<br>')}</div>`)
+                    .join('');
+
+                feedbackMessageDiv.innerHTML = formattedFeedback;
+                containerDiv.style.display = 'none';
+                feedbackDiv.style.display = 'flex';
+
+                // Clear the session after successful feedback
+                localStorage.removeItem('currentChatSession');
+            } else {
+                console.log('Redirecting to /select');
+                localStorage.removeItem('currentChatSession');
+                window.location.href = '/select';
+            }
+
         } catch (error) {
-            console.error('Error ending chat:', error);
-            showWarning('Error ending chat. Please try again.');
+            console.error('Detailed error:', error);
+            showWarning(`Error ending chat: ${error.message}`);
         }
     }
+
 
     // cleanup on page unload
     window.addEventListener('beforeunload', () => {
