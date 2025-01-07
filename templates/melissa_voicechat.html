@@ -13,6 +13,7 @@
             --background: #FFFFFF;
             --grid-color: #E5E5E5;
             --spacing: 1.5rem;
+            --sidebar-width: 300px;
         }
 
         * {
@@ -61,6 +62,58 @@
             border-right: 2px solid var(--primary-black);
             padding: var(--spacing);
             overflow-y: auto;
+            height: 100vh;
+            width: var(--sidebar-width);
+            transition: transform 0.3s ease;
+        }
+
+        /* Sidebar Toggle Button (pull out sidebar for smaller screen)*/
+        .menu-toggle {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 0;
+            transform: translateY(-50%);
+            z-index: 1001;
+            padding: 0.25rem 0.35rem;
+            background: var(--primary-black);
+            color: var(--background);
+            border: none;
+            border-radius: 0 4px 4px 0;
+            cursor: pointer;
+            transition: transform 0.3s ease;
+            font-size: 1rem;
+            min-width: unset;
+            height: auto;
+        }
+
+        .menu-toggle.active {
+            transform: translateY(-50%) translateX(var(--sidebar-width));
+        }
+
+        .menu-toggle::after {
+            content: '>';
+            font-weight: normal;
+        }
+
+        .menu-toggle.active::after {
+            content: '<';
+        }
+
+        /* Overlay for sidebar */
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+
+        .overlay.active {
+            display: block;
         }
 
         .profile-header {
@@ -182,55 +235,43 @@
             margin-top: 0.25rem;
         }
 
-        /* Rapport meter styles */
+        /* Rapport meter styles, made more compacted*/
         .rapport-section {
-            padding: 1.5rem;
+            padding: 0.75rem;
             border-bottom: 2px solid var(--primary-black);
             background: var(--background);
         }
 
         .rapport-title {
-            font-size: 1rem;
-            font-weight: bold;
-            text-transform: uppercase;
-            margin-bottom: 1.5rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            font-size: 0.9rem;
+            margin-bottom: 0.75rem;
         }
 
         /* Metrics grid layout */
         .rapport-metrics {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
-            gap: 1.5rem;
+            gap: 1rem;
+            padding: 0.5rem;
         }
 
         /* Individual metric item styles */
         .metric-item {
             position: relative;
-            padding: 1rem;
+            padding: 0.75rem;
             background: rgba(0, 0, 0, 0.05);
             border-radius: 8px;
             transition: all 0.3s ease;
         }
 
+        /* Make labels and progress bars more compact */
         .metric-item label {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 0.75rem;
-            font-weight: 500;
-            font-size: 0.875rem;
+            font-size: 0.8rem;
+            margin-bottom: 0.5rem;
         }
 
-        /* Progress bar styles */
         .progress {
-            height: 8px;
-            background: #e9ecef;
-            border-radius: 4px;
-            overflow: hidden;
-            position: relative;
+            height: 6px;  /* Slightly smaller progress bar height */
         }
 
         .progress-bar {
@@ -242,13 +283,7 @@
         }
 
         .progress-text {
-            position: absolute;
-            width: 100%;
-            text-align: center;
-            font-size: 0.75rem;
-            font-weight: 500;
-            color: var(--primary-black);
-            margin-top: 0.5rem;
+            font-size: 0.7rem;
         }
 
         /* Tooltip styles */
@@ -301,14 +336,6 @@
             font-size: 0.875rem;
             line-height: 1.5;
             color: #2e7d32;
-        }
-
-        /* Responsive adjustments */
-        @media (max-width: 768px) {
-            .rapport-metrics {
-                grid-template-columns: 1fr;
-                gap: 1rem;
-            }
         }
 
         /* Voice control styles */
@@ -506,7 +533,46 @@
             }
 
             .sidebar {
-                display: none;
+                position: fixed;
+                left: 0;
+                top: 0;
+                width: var(--sidebar-width);
+                transform: translateX(-100%);
+                z-index: 1000;
+                background: var(--background);
+            }
+
+            .sidebar.active {
+                transform: translateX(0);
+            }
+
+            .menu-toggle {
+                display: block;
+            }
+
+            /* Add the rapport-metrics styles here */
+            .rapport-metrics {
+                grid-template-columns: repeat(2, 1fr);  /* Keep two columns */
+                gap: 0.5rem;  /* Smaller gap on mobile */
+            }
+
+            .metric-item {
+                padding: 0.5rem;  /* Even more compact on mobile */
+            }
+
+            .chat-header {
+                flex-direction: column;
+                gap: 1rem;
+                align-items: flex-start;
+            }
+
+            .voice-controls {
+                grid-template-columns: 1fr;
+                gap: 0.5rem;
+            }
+
+            .message {
+                max-width: 90%;
             }
 
             .feedback-container {
@@ -514,8 +580,37 @@
                 margin: 1rem;
             }
         }
-    </style>
 
+        @media (max-width: 480px) {
+            :root {
+                --spacing: 1rem;
+            }
+
+            .profile-title {
+                font-size: 2rem;
+            }
+
+            .header-title {
+                font-size: 1.25rem;
+            }
+
+            .voice-button {
+                padding: 0.5rem 1rem;
+                font-size: 0.9rem;
+            }
+
+            .message {
+                max-width: 95%;
+                padding: 0.75rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- mobile menu: @ root level-->
+    <button class="menu-toggle" aria-label="Toggle Sidebar"></button>
+    <div class="overlay" aria-hidden="true"></div>
     <!-- Main HTML Structure -->
     <div id="feedback">
         <div class="feedback-container">
@@ -633,118 +728,116 @@
                     Start Recording
                 </button>
             </div>
-        </main>
-    </div>
-    </style>
-</head>
+            </style>
+            </head>
 
-<script>
-    // Initialize variables with current audio tracking
-    let mediaRecorder;
-    let audioChunks = [];
-    let isRecording = false;
-    let currentAudio = null;
-    let recordingStream = null;
-    // At the top of your script, modify the session ID initialization:
-    const sessionId = (() => {
-        // Try to get existing session ID from localStorage
-        const existingSession = localStorage.getItem('currentChatSession');
-        if (existingSession) {
-            return existingSession;
-        }
-        // Create new session ID if none exists
-        const newSession = Date.now().toString();
-        localStorage.setItem('currentChatSession', newSession);
-        return newSession;
-    })();
+            <script>
+                // Initialize variables with current audio tracking
+                let mediaRecorder;
+                let audioChunks = [];
+                let isRecording = false;
+                let currentAudio = null;
+                let recordingStream = null;
+                // At the top of your script, modify the session ID initialization:
+                const sessionId = (() => {
+                    // Try to get existing session ID from localStorage
+                    const existingSession = localStorage.getItem('currentChatSession');
+                    if (existingSession) {
+                        return existingSession;
+                    }
+                    // Create new session ID if none exists
+                    const newSession = Date.now().toString();
+                    localStorage.setItem('currentChatSession', newSession);
+                    return newSession;
+                })();
 
 
-    // Get DOM elements
-    const recordButton = document.getElementById('recordButton');
-    const recordingIndicator = document.getElementById('recordingIndicator');
-    const statusText = document.getElementById('statusText');
+                // Get DOM elements
+                const recordButton = document.getElementById('recordButton');
+                const recordingIndicator = document.getElementById('recordingIndicator');
+                const statusText = document.getElementById('statusText');
 
 
-    recordButton.removeEventListener('click', toggleRecording);
+                recordButton.removeEventListener('click', toggleRecording);
 
-    // Add keyboard shortcut for recording
-    document.addEventListener('keydown', async (event) => {
-        if (event.code === 'Space' && !isRecording) {
-            event.preventDefault();
-            await startRecording();
-        }
-    });
+                // Add keyboard shortcut for recording
+                document.addEventListener('keydown', async (event) => {
+                    if (event.code === 'Space' && !isRecording) {
+                        event.preventDefault();
+                        await startRecording();
+                    }
+                });
 
-    document.addEventListener('keyup', async (event) => {
-        if (event.code === 'Space' && isRecording) {
-            event.preventDefault();
-            await stopRecording();
-        }
-    });
+                document.addEventListener('keyup', async (event) => {
+                    if (event.code === 'Space' && isRecording) {
+                        event.preventDefault();
+                        await stopRecording();
+                    }
+                });
 
-    function updateMetric(metricId, score) {
-        const bar = document.getElementById(`${metricId}-bar`);
-        const progress = bar.parentElement;
-        const text = progress.querySelector('.progress-text');
+                function updateMetric(metricId, score) {
+                    const bar = document.getElementById(`${metricId}-bar`);
+                    const progress = bar.parentElement;
+                    const text = progress.querySelector('.progress-text');
 
-        bar.style.width = `${score}%`;
-        text.textContent = `${score}%`;
-        progress.setAttribute('aria-valuenow', score);
-    }
-
-    function updateMetricIcon(metricId, score) {
-        updateMetric(metricId.replace('-metric', ''), score);
-    }
-
-    // Audio control functions
-    function stopCurrentAudio() {
-        if (currentAudio) {
-            try {
-                currentAudio.pause();
-                currentAudio.currentTime = 0;
-                if (currentAudio.src) {
-                    URL.revokeObjectURL(currentAudio.src);
+                    bar.style.width = `${score}%`;
+                    text.textContent = `${score}%`;
+                    progress.setAttribute('aria-valuenow', score);
                 }
-            } catch (e) {
-                console.error('Error stopping audio:', e);
-            } finally {
-                currentAudio = null;
-            }
-        }
-    }
 
-    async function playAudioResponse(base64Audio) {
-        try {
-            stopCurrentAudio();
+                function updateMetricIcon(metricId, score) {
+                    updateMetric(metricId.replace('-metric', ''), score);
+                }
 
-            // Convert base64 to blob with proper Safari handling
-            const audioData = atob(base64Audio);
-            const arrayBuffer = new ArrayBuffer(audioData.length);
-            const view = new Uint8Array(arrayBuffer);
-            for (let i = 0; i < audioData.length; i++) {
-                view[i] = audioData.charCodeAt(i);
-            }
+                // Audio control functions
+                function stopCurrentAudio() {
+                    if (currentAudio) {
+                        try {
+                            currentAudio.pause();
+                            currentAudio.currentTime = 0;
+                            if (currentAudio.src) {
+                                URL.revokeObjectURL(currentAudio.src);
+                            }
+                        } catch (e) {
+                            console.error('Error stopping audio:', e);
+                        } finally {
+                            currentAudio = null;
+                        }
+                    }
+                }
 
-            const audioBlob = new Blob([arrayBuffer], { type: 'audio/mp3' });
-            const audioUrl = URL.createObjectURL(audioBlob);
+                async function playAudioResponse(base64Audio) {
+                    try {
+                        stopCurrentAudio();
 
-            // Create and configure audio element
-            const audio = new Audio();
-            currentAudio = audio;
+                        // Convert base64 to blob with proper Safari handling
+                        const audioData = atob(base64Audio);
+                        const arrayBuffer = new ArrayBuffer(audioData.length);
+                        const view = new Uint8Array(arrayBuffer);
+                        for (let i = 0; i < audioData.length; i++) {
+                            view[i] = audioData.charCodeAt(i);
+                        }
 
-            // Safari detection
-            const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+                        const audioBlob = new Blob([arrayBuffer], { type: 'audio/mp3' });
+                        const audioUrl = URL.createObjectURL(audioBlob);
 
-            if (isSafari) {
-                // Safari-specific setup
-                console.log('Safari detected, using special handling');
-                return new Promise((resolve, reject) => {
-                    audio.preload = 'auto';
+                        // Create and configure audio element
+                        const audio = new Audio();
+                        currentAudio = audio;
 
-                    // Create a visible button for user interaction
-                    const tempButton = document.createElement('button');
-                    tempButton.textContent = "Play Response";
-                    tempButton.style.cssText = `
+                        // Safari detection
+                        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+                        if (isSafari) {
+                            // Safari-specific setup
+                            console.log('Safari detected, using special handling');
+                            return new Promise((resolve, reject) => {
+                                audio.preload = 'auto';
+
+                                // Create a visible button for user interaction
+                                const tempButton = document.createElement('button');
+                                tempButton.textContent = "Play Response";
+                                tempButton.style.cssText = `
                     position: fixed;
                     bottom: 20px;
                     right: 20px;
@@ -757,240 +850,240 @@
                     cursor: pointer;
                     font-weight: bold;
                 `;
-                    document.body.appendChild(tempButton);
+                                document.body.appendChild(tempButton);
 
-                    const playAttempt = async () => {
-                        try {
+                                const playAttempt = async () => {
+                                    try {
+                                        audio.src = audioUrl;
+                                        await audio.play();
+                                        tempButton.remove();
+                                        resolve();
+                                    } catch (e) {
+                                        console.error('Safari playback error:', e);
+                                        tempButton.remove();
+                                        reject(e);
+                                    }
+                                };
+
+                                tempButton.addEventListener('click', playAttempt);
+
+                                // Auto-remove button after 10 seconds if not clicked
+                                setTimeout(() => {
+                                    if (document.body.contains(tempButton)) {
+                                        tempButton.remove();
+                                        reject(new Error('Playback timeout'));
+                                    }
+                                }, 10000);
+
+                                // Error handling
+                                audio.addEventListener('error', (e) => {
+                                    console.error('Audio loading error:', e);
+                                    tempButton.remove();
+                                    reject(e);
+                                });
+
+                                audio.src = audioUrl;
+                                audio.load();
+                            });
+                        } else {
+                            // Standard handling for other browsers
                             audio.src = audioUrl;
                             await audio.play();
-                            tempButton.remove();
-                            resolve();
-                        } catch (e) {
-                            console.error('Safari playback error:', e);
-                            tempButton.remove();
-                            reject(e);
                         }
-                    };
 
-                    tempButton.addEventListener('click', playAttempt);
+                        // Setup cleanup
+                        audio.onended = () => {
+                            URL.revokeObjectURL(audioUrl);
+                            currentAudio = null;
+                        };
 
-                    // Auto-remove button after 10 seconds if not clicked
-                    setTimeout(() => {
-                        if (document.body.contains(tempButton)) {
-                            tempButton.remove();
-                            reject(new Error('Playback timeout'));
-                        }
-                    }, 10000);
+                        audio.onerror = (error) => {
+                            console.error('Audio playback error:', error);
+                            URL.revokeObjectURL(audioUrl);
+                            currentAudio = null;
+                        };
 
-                    // Error handling
-                    audio.addEventListener('error', (e) => {
-                        console.error('Audio loading error:', e);
-                        tempButton.remove();
-                        reject(e);
-                    });
+                    } catch (error) {
+                        console.error('Audio playback error:', error);
+                        currentAudio = null;
+                    }
+                }
 
-                    audio.src = audioUrl;
-                    audio.load();
-                });
-            } else {
-                // Standard handling for other browsers
-                audio.src = audioUrl;
-                await audio.play();
-            }
+                // Session management
+                function getCurrentSessionId() {
+                    return sessionId;
+                }
 
-            // Setup cleanup
-            audio.onended = () => {
-                URL.revokeObjectURL(audioUrl);
-                currentAudio = null;
-            };
+                // Recording functions
+                async function toggleRecording() {
+                    if (!isRecording) {
+                        stopCurrentAudio();
+                        await startRecording();
+                    } else {
+                        await stopRecording();
+                    }
+                }
 
-            audio.onerror = (error) => {
-                console.error('Audio playback error:', error);
-                URL.revokeObjectURL(audioUrl);
-                currentAudio = null;
-            };
+                async function startRecording() {
+                    try {
+                        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                        recordingStream = stream;
+                        mediaRecorder = new MediaRecorder(stream);
+                        audioChunks = [];
 
-        } catch (error) {
-            console.error('Audio playback error:', error);
-            currentAudio = null;
-        }
-    }
+                        mediaRecorder.addEventListener('dataavailable', event => {
+                            audioChunks.push(event.data);
+                        });
 
-    // Session management
-    function getCurrentSessionId() {
-        return sessionId;
-    }
+                        mediaRecorder.addEventListener('stop', () => {
+                            stopRecordingStream();
+                            sendAudioToServer();
+                        });
 
-    // Recording functions
-    async function toggleRecording() {
-        if (!isRecording) {
-            stopCurrentAudio();
-            await startRecording();
-        } else {
-            await stopRecording();
-        }
-    }
+                        mediaRecorder.start();
+                        isRecording = true;
 
-    async function startRecording() {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            recordingStream = stream;
-            mediaRecorder = new MediaRecorder(stream);
-            audioChunks = [];
-
-            mediaRecorder.addEventListener('dataavailable', event => {
-                audioChunks.push(event.data);
-            });
-
-            mediaRecorder.addEventListener('stop', () => {
-                stopRecordingStream();
-                sendAudioToServer();
-            });
-
-            mediaRecorder.start();
-            isRecording = true;
-
-            // Update UI
-            recordButton.innerHTML = `
+                        // Update UI
+                        recordButton.innerHTML = `
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <rect x="6" y="4" width="12" height="16"/>
             </svg>
             Recording...
         `;
-            recordButton.classList.add('recording');
-            recordingIndicator.classList.add('recording');
-            statusText.textContent = 'Release Space to send message';
+                        recordButton.classList.add('recording');
+                        recordingIndicator.classList.add('recording');
+                        statusText.textContent = 'Release Space to send message';
 
-        } catch (err) {
-            console.error('Error accessing microphone:', err);
-            showWarning('Unable to access microphone. Please ensure you have granted permission.');
-        }
-    }
+                    } catch (err) {
+                        console.error('Error accessing microphone:', err);
+                        showWarning('Unable to access microphone. Please ensure you have granted permission.');
+                    }
+                }
 
-    function stopRecordingStream() {
-        if (recordingStream) {
-            recordingStream.getTracks().forEach(track => track.stop());
-            recordingStream = null;
-        }
-    }
+                function stopRecordingStream() {
+                    if (recordingStream) {
+                        recordingStream.getTracks().forEach(track => track.stop());
+                        recordingStream = null;
+                    }
+                }
 
-    async function stopRecording() {
-        if (mediaRecorder && isRecording) {
-            mediaRecorder.stop();
-            isRecording = false;
+                async function stopRecording() {
+                    if (mediaRecorder && isRecording) {
+                        mediaRecorder.stop();
+                        isRecording = false;
 
-            // Update UI
-            recordButton.innerHTML = `
+                        // Update UI
+                        recordButton.innerHTML = `
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                 <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
                 <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
             </svg>
             Hold Space to Record
         `;
-            recordButton.classList.remove('recording');
-            recordingIndicator.classList.remove('recording');
-            statusText.textContent = 'Processing...';
-        }
-    }
+                        recordButton.classList.remove('recording');
+                        recordingIndicator.classList.remove('recording');
+                        statusText.textContent = 'Processing...';
+                    }
+                }
 
-    // Update the initial button text
-    recordButton.innerHTML = `
+                // Update the initial button text
+                recordButton.innerHTML = `
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
         <path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
     </svg>
     Hold Space to Record
 `;
-    statusText.textContent = 'Hold Space to record';
+                statusText.textContent = 'Hold Space to record';
 
-    // Server communication
-    async function sendAudioToServer() {
-        const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-        const formData = new FormData();
-        formData.append('audio', audioBlob);
-        formData.append('session_id', sessionId); // Add session ID
+                // Server communication
+                async function sendAudioToServer() {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+                    const formData = new FormData();
+                    formData.append('audio', audioBlob);
+                    formData.append('session_id', sessionId); // Add session ID
 
-        try {
-            console.log('Sending audio for transcription with session ID:', sessionId);
-            const transcribeResponse = await fetch('/transcribe', {
-                method: 'POST',
-                body: formData
-            });
-
-            if (!transcribeResponse.ok) throw new Error('Failed to transcribe audio');
-
-            const transcribeData = await transcribeResponse.json();
-            console.log('Transcribed text:', transcribeData.text);
-
-            // Send to chat endpoint
-            console.log('Sending to chat endpoint...');
-            const chatResponse = await fetch('/voice_chat', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    session_id: sessionId,
-                    message: transcribeData.text
-                })
-            });
-
-            if (!chatResponse.ok) throw new Error('Failed to process chat');
-
-            const chatData = await chatResponse.json();
-            console.log('Received chat response:', chatData);
-
-            // Update chat display
-            appendMessage(transcribeData.text, 'user');
-            if (chatData.response) {
-                appendMessage(chatData.response, 'bot');
-
-                // Play audio response if available and not recording
-                if (chatData.audio && !isRecording) {
                     try {
-                        await playAudioResponse(chatData.audio);
-                    } catch (audioError) {
-                        console.error('Error playing audio response:', audioError);
-                        showWarning('Audio playback failed. Please try again.');
+                        console.log('Sending audio for transcription with session ID:', sessionId);
+                        const transcribeResponse = await fetch('/transcribe', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        if (!transcribeResponse.ok) throw new Error('Failed to transcribe audio');
+
+                        const transcribeData = await transcribeResponse.json();
+                        console.log('Transcribed text:', transcribeData.text);
+
+                        // Send to chat endpoint
+                        console.log('Sending to chat endpoint...');
+                        const chatResponse = await fetch('/voice_chat', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                session_id: sessionId,
+                                message: transcribeData.text
+                            })
+                        });
+
+                        if (!chatResponse.ok) throw new Error('Failed to process chat');
+
+                        const chatData = await chatResponse.json();
+                        console.log('Received chat response:', chatData);
+
+                        // Update chat display
+                        appendMessage(transcribeData.text, 'user');
+                        if (chatData.response) {
+                            appendMessage(chatData.response, 'bot');
+
+                            // Play audio response if available and not recording
+                            if (chatData.audio && !isRecording) {
+                                try {
+                                    await playAudioResponse(chatData.audio);
+                                } catch (audioError) {
+                                    console.error('Error playing audio response:', audioError);
+                                    showWarning('Audio playback failed. Please try again.');
+                                }
+                            }
+                        }
+
+                        // Rapport 
+                        if (chatData.rapport_data) {
+                            // Metrics icons
+                            updateMetricIcon('empathy', chatData.rapport_data.metrics.empathy);
+                            updateMetricIcon('engagement', chatData.rapport_data.metrics.engagement);
+                            updateMetricIcon('flow', chatData.rapport_data.metrics.flow);
+                            updateMetricIcon('respect', chatData.rapport_data.metrics.respect);
+
+                            // Overall rapport
+                            if (chatData.rapport_data.overall) {
+                                updateRapportMeter(chatData.rapport_data.overall);
+                            }
+                        }
+
+                        // warnings
+                        if (chatData.warning) {
+                            showWarning(chatData.warning);
+                        }
+
+                        statusText.textContent = 'Press Space to start recording';
+
+                    } catch (error) {
+                        console.error('Error:', error);
+                        showWarning('An error occurred. Please try again.');
+                        statusText.textContent = 'Press Space to start recording';
                     }
                 }
-            }
 
-            // Rapport 
-            if (chatData.rapport_data) {
-                // Metrics icons
-                updateMetricIcon('empathy', chatData.rapport_data.metrics.empathy);
-                updateMetricIcon('engagement', chatData.rapport_data.metrics.engagement);
-                updateMetricIcon('flow', chatData.rapport_data.metrics.flow);
-                updateMetricIcon('respect', chatData.rapport_data.metrics.respect);
+                // UI update functions
+                function appendMessage(content, type) {
+                    const messageDiv = document.createElement('div');
+                    messageDiv.className = `message ${type}`;
 
-                // Overall rapport
-                if (chatData.rapport_data.overall) {
-                    updateRapportMeter(chatData.rapport_data.overall);
-                }
-            }
-
-            // warnings
-            if (chatData.warning) {
-                showWarning(chatData.warning);
-            }
-
-            statusText.textContent = 'Press Space to start recording';
-
-        } catch (error) {
-            console.error('Error:', error);
-            showWarning('An error occurred. Please try again.');
-            statusText.textContent = 'Press Space to start recording';
-        }
-    }
-
-    // UI update functions
-    function appendMessage(content, type) {
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `message ${type}`;
-
-        if (type === 'user') {
-            messageDiv.innerHTML = `
+                    if (type === 'user') {
+                        messageDiv.innerHTML = `
                 <div class="audio-message">
                     <div class="audio-controls">
                         <div class="play-button">
@@ -1006,133 +1099,151 @@
                 <div class="message-text">${content}</div>
                 <div class="timestamp">${getTimeString()}</div>
             `;
-        } else {
-            messageDiv.innerHTML = `
+                    } else {
+                        messageDiv.innerHTML = `
                 ${content}
                 <div class="timestamp">${getTimeString()}</div>
             `;
-        }
+                    }
 
-        document.getElementById('messages').appendChild(messageDiv);
-        messageDiv.scrollIntoView({ behavior: 'smooth' });
-    }
+                    document.getElementById('messages').appendChild(messageDiv);
+                    messageDiv.scrollIntoView({ behavior: 'smooth' });
+                }
 
-    function updateRapportMeter(score) {
-        const progressBar = document.getElementById('rapport-progress');
-        const valueDisplay = document.getElementById('rapport-value');
-        const statusDisplay = document.getElementById('rapport-status');
+                function updateRapportMeter(score) {
+                    const progressBar = document.getElementById('rapport-progress');
+                    const valueDisplay = document.getElementById('rapport-value');
+                    const statusDisplay = document.getElementById('rapport-status');
 
-        progressBar.style.width = `${score}%`;
-        valueDisplay.textContent = `${Math.round(score)}%`;
+                    progressBar.style.width = `${score}%`;
+                    valueDisplay.textContent = `${Math.round(score)}%`;
 
-        if (score < 30) {
-            statusDisplay.textContent = 'Building Connection...';
-        } else if (score < 60) {
-            statusDisplay.textContent = 'Connected';
-        } else if (score < 80) {
-            statusDisplay.textContent = 'Strong Connection';
-        } else {
-            statusDisplay.textContent = 'Excellent Connection!';
-        }
-    }
+                    if (score < 30) {
+                        statusDisplay.textContent = 'Building Connection...';
+                    } else if (score < 60) {
+                        statusDisplay.textContent = 'Connected';
+                    } else if (score < 80) {
+                        statusDisplay.textContent = 'Strong Connection';
+                    } else {
+                        statusDisplay.textContent = 'Excellent Connection!';
+                    }
+                }
 
-    function showWarning(message) {
-        const warning = document.getElementById('warning');
-        if (warning) {
-            warning.textContent = message;
-            warning.style.display = 'block';
-            setTimeout(() => {
-                warning.style.display = 'none';
-            }, 3000);
-        }
-    }
+                function showWarning(message) {
+                    const warning = document.getElementById('warning');
+                    if (warning) {
+                        warning.textContent = message;
+                        warning.style.display = 'block';
+                        setTimeout(() => {
+                            warning.style.display = 'none';
+                        }, 3000);
+                    }
+                }
 
-    // Utility functions
-    function getTimeString() {
-        return new Date().toLocaleTimeString('en-US', {
-            hour12: false,
-            hour: '2-digit',
-            minute: '2-digit'
-        });
-    }
+                // Utility functions
+                function getTimeString() {
+                    return new Date().toLocaleTimeString('en-US', {
+                        hour12: false,
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    });
+                }
 
-    function closeWarning() {
-        document.getElementById('warning').style.display = 'none';
-    }
+                function closeWarning() {
+                    document.getElementById('warning').style.display = 'none';
+                }
 
-    async function endChat() {
-        try {
-            stopCurrentAudio();
-            console.log('Starting end chat process...');
-            console.log('Using session ID:', sessionId);
+                async function endChat() {
+                    try {
+                        stopCurrentAudio();
+                        console.log('Starting end chat process...');
+                        console.log('Using session ID:', sessionId);
 
-            // Check if we have any messages before ending
-            const messagesContainer = document.getElementById('messages');
-            if (!messagesContainer || messagesContainer.children.length === 0) {
-                showWarning('Please have at least one conversation before ending the chat.');
-                return;
-            }
+                        const response = await fetch('/feedback', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify({
+                                session_id: sessionId
+                            })
+                        });
 
-            const response = await fetch('/feedback', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    session_id: sessionId
-                })
-            });
+                        const textResponse = await response.text();
+                        console.log('Raw feedback response:', textResponse);
 
-            const textResponse = await response.text();
-            console.log('Raw feedback response:', textResponse);
+                        if (!response.ok) {
+                            throw new Error(`Failed to end chat: ${response.status} ${textResponse}`);
+                        }
 
-            if (!response.ok) {
-                throw new Error(`Failed to end chat: ${response.status} ${textResponse}`);
-            }
+                        const data = JSON.parse(textResponse);
 
-            const data = JSON.parse(textResponse);
+                        const feedbackDiv = document.getElementById('feedback');
+                        const feedbackMessageDiv = document.getElementById('feedback-message');
+                        const containerDiv = document.querySelector('.container');
 
-            const feedbackDiv = document.getElementById('feedback');
-            const feedbackMessageDiv = document.getElementById('feedback-message');
-            const containerDiv = document.querySelector('.container');
+                        if (data.feedback && feedbackDiv && feedbackMessageDiv) {
+                            const formattedFeedback = data.feedback
+                                .split('\n\n')
+                                .map(section => `<div class="feedback-section">${section.replace(/\n/g, '<br>')}</div>`)
+                                .join('');
 
-            if (data.feedback && feedbackDiv && feedbackMessageDiv) {
-                const formattedFeedback = data.feedback
-                    .split('\n\n')
-                    .map(section => `<div class="feedback-section">${section.replace(/\n/g, '<br>')}</div>`)
-                    .join('');
+                            feedbackMessageDiv.innerHTML = formattedFeedback;
+                            containerDiv.style.display = 'none';
+                            feedbackDiv.style.display = 'flex';
 
-                feedbackMessageDiv.innerHTML = formattedFeedback;
-                containerDiv.style.display = 'none';
-                feedbackDiv.style.display = 'flex';
+                            // Clear the session after successful feedback
+                            localStorage.removeItem('currentChatSession');
+                        } else {
+                            console.log('Redirecting to /select');
+                            localStorage.removeItem('currentChatSession');
+                            window.location.href = '/select';
+                        }
 
-                // Clear the session after successful feedback
-                localStorage.removeItem('currentChatSession');
-            } else {
-                console.log('Redirecting to /select');
-                localStorage.removeItem('currentChatSession');
-                window.location.href = '/select';
-            }
-
-        } catch (error) {
-            console.error('Detailed error:', error);
-            showWarning(`Error ending chat: ${error.message}`);
-        }
-    }
+                    } catch (error) {
+                        console.error('Detailed error:', error);
+                        showWarning(`Error ending chat: ${error.message}`);
+                    }
+                }
 
 
-    // cleanup on page unload
-    window.addEventListener('beforeunload', () => {
-        stopCurrentAudio();
-    });
+                // cleanup on page unload
+                window.addEventListener('beforeunload', () => {
+                    stopCurrentAudio();
+                });
 
-    function returnToSelection() {
-        window.location.href = '/select';
-    }
+                function returnToSelection() {
+                    window.location.href = '/select';
+                }
 
-    // Initialize returnButton click handler
-    document.getElementById('returnButton').onclick = returnToSelection;
-</script>
+                // Initialize returnButton click handler
+                document.getElementById('returnButton').onclick = returnToSelection;
+
+                // Sidebar functionality
+                document.addEventListener('DOMContentLoaded', () => {
+                    const menuToggle = document.querySelector('.menu-toggle');
+                    const sidebar = document.querySelector('.sidebar');
+                    const overlay = document.querySelector('.overlay');
+
+                    function toggleMenu() {
+                        sidebar.classList.toggle('active');
+                        menuToggle.classList.toggle('active');
+                        overlay.classList.toggle('active');
+                        menuToggle.setAttribute('aria-expanded',
+                            sidebar.classList.contains('active'));
+                    }
+
+                    menuToggle.addEventListener('click', toggleMenu);
+                    overlay.addEventListener('click', toggleMenu);
+
+                    // Close menu on escape key
+                    document.addEventListener('keydown', (e) => {
+                        if (e.key === 'Escape' && sidebar.classList.contains('active')) {
+                            toggleMenu();
+                        }
+                    });
+                });
+            </script>
 </body>
 
 </html>

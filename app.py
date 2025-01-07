@@ -1269,7 +1269,7 @@ def voice_chat():
     
 
 
-# Melissa route
+# Melissa chat route
 @app.route('/chatbot', methods=['POST'])
 def chatbot():
     try:
@@ -1517,10 +1517,13 @@ def feedback():
         if not session_id:
             return jsonify({'error': 'No session ID provided'}), 400
 
+         # If no conversation exists, return a default response
         if session_id not in conversations:
-            print(f"Available sessions: {list(conversations.keys())}")
-            return jsonify({'error': f'No conversation found for session ID: {session_id}'}), 400
-
+                return jsonify({
+                'feedback': 'No conversation to analyze.',
+                'rapport_score': 0
+            })
+        
         conversation_data = conversations.pop(session_id)
         messages = "<br>".join(conversation_data['messages'])
         

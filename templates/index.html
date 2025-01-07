@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -35,7 +36,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-image: 
+            background-image:
                 linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
                 linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
             background-size: 24px 24px;
@@ -139,17 +140,37 @@
             font-size: 0.875rem;
         }
 
-        @media (max-width: 768px) {
+        @media (max-width: 1024px) {
             .menu-grid {
                 grid-template-columns: 1fr;
             }
 
             .logo {
-                font-size: 3rem;
+                font-size: 2.5rem;
+                margin-bottom: 0.5rem;
             }
 
             .container {
                 padding: 1rem;
+            }
+
+            .header {
+                margin-bottom: 2rem;
+                padding-bottom: 1rem;
+            }
+
+            .tagline {
+                font-size: 1rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .logo {
+                font-size: 2rem;
+            }
+
+            .container {
+                padding: 0.5rem;
             }
         }
 
@@ -174,6 +195,7 @@
         }
     </style>
 </head>
+
 <body>
     <div class="navigation-line navigation-line-top"></div>
     <div class="navigation-line navigation-line-left"></div>
@@ -190,13 +212,13 @@
                 <h2 class="menu-title">Training Guide</h2>
                 <p class="menu-description">Learn best practices and guidelines for being an effective companion.</p>
             </a>
-        
+
             <a href="/chat_guidance" class="menu-item">
                 <div class="menu-number">2</div>
                 <h2 class="menu-title">Practice Chat</h2>
                 <p class="menu-description">Practice your communication skills with guided scenarios and feedback.</p>
             </a>
-        
+
             <a href="/select" class="menu-item">
                 <div class="menu-number">3</div>
                 <h2 class="menu-title">Chat with Senior</h2>
@@ -220,8 +242,8 @@
                 }, 200);
             });
         });
-    
-        document.addEventListener('DOMContentLoaded', function() {
+
+        document.addEventListener('DOMContentLoaded', function () {
             document.body.style.opacity = '0';
             requestAnimationFrame(() => {
                 document.body.style.transition = 'opacity 0.3s ease';
@@ -230,4 +252,5 @@
         });
     </script>
 </body>
+
 </html>
