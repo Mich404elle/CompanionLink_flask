@@ -266,25 +266,51 @@
 
         /* Make labels and progress bars more compact */
         .metric-item label {
+            display: block;
             font-size: 0.8rem;
             margin-bottom: 0.5rem;
+            font-weight: 500;
         }
 
-        .progress {
-            height: 6px;
-            /* Slightly smaller progress bar height */
-        }
-
-        .progress-bar {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(90deg, #4CAF50, #8BC34A);
-            transition: width 0.3s ease;
+        .metric-item .progress {
+            width: 100%;
+            height: 8px;
+            /* Slightly taller for better visibility */
+            background-color: #E5E5E5;
             border-radius: 4px;
+            overflow: hidden;
+            /* Important for containing the progress bar */
+            position: relative;
+            /* Important for child positioning */
+            display: block;
+            margin-top: 0.5rem;
         }
 
-        .progress-text {
+        .metric-item .progress-bar {
+            position: absolute;
+            left: 0;
+            top: 0;
+            height: 100%;
+            background: linear-gradient(90deg, #f75018, #e4752c);
+            transition: width 0.3s ease;
+            min-width: 0;
+            width: 0;
+            /* Start at 0 */
+        }
+
+        .metric-item .progress-text {
+            display: block;
             font-size: 0.7rem;
+            margin-top: 0.25rem;
+            text-align: right;
+        }
+
+        .metric-item {
+            border: 1px solid rgba(0, 0, 0, 0.1);
+        }
+
+        .metric-item .progress {
+            border: 1px solid rgba(0, 0, 0, 0.1);
         }
 
         /* Tooltip styles */
@@ -780,15 +806,38 @@
                 });
 
                 function updateMetric(metricId, score) {
+                    console.log(`Updating metric ${metricId} to ${score}`);
                     const bar = document.getElementById(`${metricId}-bar`);
-                    const progress = bar.parentElement;
-                    const text = progress.querySelector('.progress-text');
+                    if (!bar) {
+                        console.error(`Progress bar not found for metric: ${metricId}`);
+                        return;
+                    }
 
-                    bar.style.width = `${score}%`;
-                    text.textContent = `${score}%`;
-                    progress.setAttribute('aria-valuenow', score);
+                    // Ensure score is a number and clamp it between 0 and 100
+                    const numericScore = Math.min(Math.max(parseFloat(score), 0), 100);
+                    if (isNaN(numericScore)) {
+                        console.error(`Invalid score value for ${metricId}:`, score);
+                        return;
+                    }
+
+                    // Force style update
+                    requestAnimationFrame(() => {
+                        // Update progress bar width
+                        bar.style.cssText = `width: ${numericScore}% !important`;
+
+                        // Update progress text
+                        const parent = bar.closest('.metric-item');
+                        if (parent) {
+                            const progressText = parent.querySelector('.progress-text');
+                            if (progressText) {
+                                progressText.textContent = `${Math.round(numericScore)}%`;
+                            }
+                        }
+                    });
+
+                    // Log the computed style to verify
+                    console.log(`Set width for ${metricId}:`, bar.style.width);
                 }
-
                 function updateMetricIcon(metricId, score) {
                     updateMetric(metricId.replace('-metric', ''), score);
                 }
@@ -812,90 +861,47 @@
 
                 async function playAudioResponse(base64Audio) {
                     try {
+                        // Stop any currently playing audio
                         stopCurrentAudio();
 
-                        // Convert base64 to blob with proper Safari handling
+                        // Convert base64 to blob
                         const audioData = atob(base64Audio);
                         const arrayBuffer = new ArrayBuffer(audioData.length);
                         const view = new Uint8Array(arrayBuffer);
                         for (let i = 0; i < audioData.length; i++) {
                             view[i] = audioData.charCodeAt(i);
                         }
-
                         const audioBlob = new Blob([arrayBuffer], { type: 'audio/mp3' });
                         const audioUrl = URL.createObjectURL(audioBlob);
 
-                        // Create and configure audio element
+                        // Create and configure new audio element
                         const audio = new Audio();
                         currentAudio = audio;
+                        audio.preload = 'auto';
+                        audio.src = audioUrl;
 
-                        // Safari detection
-                        const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-
-                        if (isSafari) {
-                            // Safari-specific setup
-                            console.log('Safari detected, using special handling');
-                            return new Promise((resolve, reject) => {
-                                audio.preload = 'auto';
-
-                                // Create a visible button for user interaction 
-                                const tempButton = document.createElement('button');
-                                tempButton.textContent = "Play Response";
-                                tempButton.style.cssText = `
-                                    position: fixed;
-                                    bottom: 20px;
-                                    right: 20px;
-                                    z-index: 1000;
-                                    padding: 10px 20px;
-                                    background: #000;
-                                    color: #fff;
-                                    border: none;
-                                    border-radius: 4px;
-                                    cursor: pointer;
-                                    font-weight: bold;
-                                `;
-                                document.body.appendChild(tempButton);
-
-                                const playAttempt = async () => {
-                                    try {
-                                        audio.src = audioUrl;
-                                        await audio.play();
-                                        tempButton.remove();
-                                        resolve();
-                                    } catch (e) {
-                                        console.error('Safari playback error:', e);
-                                        tempButton.remove();
-                                        reject(e);
-                                    }
-                                };
-
-                                tempButton.addEventListener('click', playAttempt);
-
-                                // Auto-remove button after 10 seconds if not clicked
-                                setTimeout(() => {
-                                    if (document.body.contains(tempButton)) {
-                                        tempButton.remove();
-                                        reject(new Error('Playback timeout'));
-                                    }
-                                }, 10000);
-
-                                // Error handling
-                                audio.addEventListener('error', (e) => {
-                                    console.error('Audio loading error:', e);
-                                    tempButton.remove();
-                                    reject(e);
-                                });
-
-                                audio.src = audioUrl;
-                                audio.load();
-                            });
-                        } else {
-                            // Standard handling for other browsers
-                            audio.src = audioUrl;
+                        // First attempt to play
+                        try {
                             await audio.play();
+                        } catch (playError) {
+                            console.warn('Initial auto-play failed, attempting audio context unlock:', playError);
+
+                            // Try to unlock audio context with silent audio
+                            const silentAudio = new Audio();
+                            silentAudio.preload = 'auto';
+                            // Base64 encoded 0.1s silent audio file
+                            silentAudio.src = 'data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAEA';
+
+                            try {
+                                await silentAudio.play();
+                                await audio.play();
+                            } catch (retryError) {
+                                console.error('Audio playback failed after unlock attempt:', retryError);
+                                throw new Error('Failed to auto-play audio after unlock attempt');
+                            }
                         }
 
-                        // Setup cleanup
+                        // Set up cleanup handlers
                         audio.onended = () => {
                             URL.revokeObjectURL(audioUrl);
                             currentAudio = null;
@@ -905,11 +911,15 @@
                             console.error('Audio playback error:', error);
                             URL.revokeObjectURL(audioUrl);
                             currentAudio = null;
+                            throw error;
                         };
 
                     } catch (error) {
-                        console.error('Audio playback error:', error);
-                        currentAudio = null;
+                        console.error('Audio playback failed:', error);
+                        if (currentAudio) {
+                            currentAudio = null;
+                        }
+                        throw error;
                     }
                 }
 
@@ -1037,36 +1047,50 @@
                         const chatData = await chatResponse.json();
                         console.log('Received chat response:', chatData);
 
+                        // Play audio response immediately if available and not recording
+                        if (chatData.audio && !isRecording) {
+                            try {
+                                await playAudioResponse(chatData.audio);
+                            } catch (audioError) {
+                                console.error('Error playing audio response:', audioError);
+                                showWarning('Audio playback failed. Please try again.');
+                            }
+                        }
+
                         // Update chat display
                         appendMessage(transcribeData.text, 'user');
                         if (chatData.response) {
                             appendMessage(chatData.response, 'bot');
+                        }
 
-                            // Play audio response if available and not recording
-                            if (chatData.audio && !isRecording) {
-                                try {
-                                    await playAudioResponse(chatData.audio);
-                                } catch (audioError) {
-                                    console.error('Error playing audio response:', audioError);
-                                    showWarning('Audio playback failed. Please try again.');
+                        // Rapport data handling
+                        // Rapport handling
+                        if (typeof chatData.rapport_score === 'number') {
+                            console.log('Received rapport score:', chatData.rapport_score);
+
+                            // Update all metrics with the same score
+                            const score = chatData.rapport_score;
+                            updateMetric('empathy', score);
+                            updateMetric('engagement', score);
+                            updateMetric('flow', score);
+                            updateMetric('respect', score);
+
+                            // Update status based on score
+                            const statusDisplay = document.getElementById('rapport-status');
+                            if (statusDisplay) {
+                                if (score < 30) {
+                                    statusDisplay.textContent = 'Building Connection...';
+                                } else if (score < 60) {
+                                    statusDisplay.textContent = 'Connected';
+                                } else if (score < 80) {
+                                    statusDisplay.textContent = 'Strong Connection';
+                                } else {
+                                    statusDisplay.textContent = 'Excellent Connection!';
                                 }
                             }
+                        } else {
+                            console.warn('No valid rapport score in response:', chatData);
                         }
-
-                        // Rapport 
-                        if (chatData.rapport_data) {
-                            // Metrics icons
-                            updateMetricIcon('empathy', chatData.rapport_data.metrics.empathy);
-                            updateMetricIcon('engagement', chatData.rapport_data.metrics.engagement);
-                            updateMetricIcon('flow', chatData.rapport_data.metrics.flow);
-                            updateMetricIcon('respect', chatData.rapport_data.metrics.respect);
-
-                            // Overall rapport
-                            if (chatData.rapport_data.overall) {
-                                updateRapportMeter(chatData.rapport_data.overall);
-                            }
-                        }
-
                         // warnings
                         if (chatData.warning) {
                             showWarning(chatData.warning);
