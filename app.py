@@ -18,20 +18,20 @@ load_dotenv()
 app = Flask(__name__)
 CORS(app)
 
+# Set the limits for the HTTPX client and specifying port (set up for debugging deployment issue with render)
 httpx.Limits(max_keepalive_connections=None, max_connections=None)
-
 port = int(os.getenv('PORT', 10000))
 
 # Initialize OpenAI client
 client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 
-
-# Initialize the voice handler
+# Initialize the VoiceChatHandler class
 voice_handler = VoiceChatHandler()    
 
 conversations = {}
 
-# Define the text guidance material
+# Training material for guidance.html page
+# will be converted into a list for the template to use later
 training_material = """
 General Guidelines:
 1. The goal of the Companion Call program is to socialize and build meaningful friendships.
@@ -71,21 +71,22 @@ open_ended_questions = [
     "What is a skill you have always wanted to learn?"
 ]
 
+# Home page (index.html)
 @app.route('/')
 def index():
     return render_template('index.html')
 
-# Route for the training guidance
+# text guidance page
 @app.route('/guidance')
 def guidance():
     return render_template('guidance.html', guidance=training_material.split('<br>'))
 
-
-# Route for chatbot for guidance
+# scenario chatbot page
 @app.route('/chat_guidance')
 def chat_guidance():
     return render_template('chat_guidance.html')
 
+# scenario progress tracking
 scenario_progress = {}
 scenario_attempts = {}
 
@@ -100,7 +101,11 @@ SCENARIO_ORDER = [
     "family"
 ]
 
-# Scenarios to go over
+# Scenarios Dictionary: to go over for chat_guidance
+    # "text": used as reference for semantic similarity comparison
+    # "weight": used as a multiplier or factor later in TF-IDF similarity calculation
+    # "required_elements": used to check if the user's response contains the required elements, later used in violation check
+    # "feedback_thresholds": set thresholds for determine the quality of response based on the calculated similarity score: f(TF-IDF, weight, embedding similarity)
 scenarios = {
     "introduction": {
         "type": "introduction",
@@ -108,18 +113,15 @@ scenarios = {
         "answers": [
             {
                 "text": "Hello, my name is Ali, and I'm a volunteer with CompanionLink. I'm from University of Toronto, and I'm currently studying sociology. I'm volunteering here because I love connecting with people, and I'm here to spend some time with you, whether that's chatting, helping out with little tasks, or just keeping you company.",
-                "weight": 1.0,
-                "key_elements": ["greeting", "name", "organization", "personal details", "enthusiasm", "purpose"]
+                "weight": 1.0, 
             },
             {
                 "text": "Hi there! I'm a CompanionLink volunteer, and my name is Ali. I'm studying sociology at the University of Toronto, and I'm really excited to spend time with you. I love meeting new people and would be happy to chat, help with tasks, or simply keep you company.",
                 "weight": 0.9,
-                "key_elements": ["greeting", "name", "organization", "personal details", "enthusiasm", "purpose"]
             },
             {
                 "text": "Good morning! I'm Ali from CompanionLink, and I'm a sociology student at the University of Toronto. I'm really looking forward to getting to know you and spending time together, whether we're chatting or doing activities you enjoy.",
                 "weight": 0.85,
-                "key_elements": ["greeting", "name", "organization", "personal details", "enthusiasm", "purpose"]
             }
         ],
         "required_elements": {
@@ -146,17 +148,14 @@ scenarios = {
             {
                 "text": "I understand how you're feeling lonely, and I really wish I could help in person. However, as a CompanionLink volunteer, I can only provide support through our calls. I'm here to chat with you and keep you company during our conversations, and I'd love to make these calls a bright spot in your day.",
                 "weight": 1.0,
-                "key_elements": ["empathy", "boundary setting", "alternative support", "positive tone"]
             },
             {
                 "text": "I hear how lonely you're feeling, and I want you to know that I care. While I'm not able to visit in person as per CompanionLink's guidelines, I'm committed to being here for you through our regular calls and conversations.",
                 "weight": 0.9,
-                "key_elements": ["empathy", "boundary setting", "alternative support", "positive tone"]
             },
             {
                 "text": "That must be really difficult feeling so lonely. While I can't meet in person due to our program's policies, I'm here to support you through our calls and would love to schedule regular chat times with you.",
                 "weight": 0.85,
-                "key_elements": ["empathy", "boundary setting", "alternative support", "positive tone"]
             }
         ],
         "required_elements": {
@@ -183,17 +182,14 @@ scenarios = {
             {
                 "text": "I appreciate you wanting to discuss this with me, but as a CompanionLink volunteer, I try to remain neutral on political matters. I'd love to hear your thoughts and experiences though, if you'd like to share them.",
                 "weight": 1.0,
-                "key_elements": ["appreciation", "neutrality", "redirection", "engagement"]
             },
             {
                 "text": "While I'm not the best person to comment on political matters, I'm very interested in hearing your perspective and experiences with this topic if you'd like to share.",
                 "weight": 0.9,
-                "key_elements": ["appreciation", "neutrality", "redirection", "engagement"]
             },
             {
                 "text": "As your companion, I think it's best for me to stay neutral on political topics, but I'm happy to listen and learn about your experiences and thoughts on this matter.",
                 "weight": 0.85,
-                "key_elements": ["appreciation", "neutrality", "redirection", "engagement"]
             }
         ],
         "required_elements": {
@@ -220,17 +216,14 @@ scenarios = {
             {
                 "text": "While I care about your health and well-being, I'm not qualified to give medical advice. I would strongly encourage you to consult with your doctor about these concerns, as they're the best person to provide proper medical guidance.",
                 "weight": 1.0,
-                "key_elements": ["care", "limitation", "referral", "encouragement"]
             },
             {
                 "text": "I hear your health concerns, but as a companion, I cannot provide medical advice. The best person to help you with this would be your doctor, and I really encourage you to schedule an appointment to discuss these issues.",
                 "weight": 0.9,
-                "key_elements": ["care", "limitation", "referral", "encouragement"]
             },
             {
                 "text": "Your health is important, and while I can't offer medical advice, I think it would be wise to discuss these concerns with your healthcare provider who can give you proper medical guidance.",
                 "weight": 0.85,
-                "key_elements": ["care", "limitation", "referral", "encouragement"]
             }
         ],
         "required_elements": {
@@ -257,17 +250,14 @@ scenarios = {
             {
                 "text": "I deeply respect all religious and spiritual beliefs, and I think these matters are very personal. While I prefer not to discuss my own religious views, I'm happy to hear about your spiritual journey if you'd like to share.",
                 "weight": 1.0,
-                "key_elements": ["respect", "neutrality", "openness", "redirection"]
             },
             {
                 "text": "Religion and spirituality are very personal matters, and I respect everyone's individual beliefs. While I keep my own religious views private, I'm interested in learning about your spiritual experiences if you'd like to share them.",
                 "weight": 0.9,
-                "key_elements": ["respect", "neutrality", "openness", "redirection"]
             },
             {
                 "text": "I believe it's important to respect all faiths and spiritual paths. Though I prefer to keep my own beliefs private, I'm always open to listening and learning about your spiritual experiences.",
                 "weight": 0.85,
-                "key_elements": ["respect", "neutrality", "openness", "redirection"]
             }
         ],
         "required_elements": {
@@ -294,17 +284,14 @@ scenarios = {
             {
                 "text": "I understand this is a challenging situation, but as a companion, I'm not able to provide legal recommendations. I would encourage you to contact your local bar association or legal aid society, as they can connect you with qualified legal professionals.",
                 "weight": 1.0,
-                "key_elements": ["empathy", "limitation", "referral", "professional guidance"]
             },
             {
                 "text": "While I care about your situation, I cannot provide legal advice or recommendations. The best course of action would be to contact a legal professional through your local bar association who can properly assist you with this matter.",
                 "weight": 0.9,
-                "key_elements": ["empathy", "limitation", "referral", "professional guidance"]
             },
             {
                 "text": "This sounds like a difficult situation, but I'm not qualified to give legal advice or recommendations. I'd strongly encourage you to reach out to a legal professional who can properly guide you through this process.",
                 "weight": 0.85,
-                "key_elements": ["empathy", "limitation", "referral", "professional guidance"]
             }
         ],
         "required_elements": {
@@ -331,17 +318,14 @@ scenarios = {
             {
                 "text": "I hear how challenging this family situation is for you, and I appreciate you trusting me with this. While I don't feel comfortable giving personal advice about family matters, I'm here to listen. You might find it helpful to discuss this with a family counselor or someone who knows your family dynamics well.",
                 "weight": 1.0,
-                "key_elements": ["empathy", "appreciation", "limitation", "redirection"]
             },
             {
                 "text": "Family situations can be really complex and personal. While I can't give specific advice about what to do, I'm here to listen and support you. Have you considered talking with a family counselor who could provide professional guidance?",
                 "weight": 0.9,
-                "key_elements": ["empathy", "appreciation", "limitation", "redirection"]
             },
             {
                 "text": "I understand this is a difficult family situation, and I care about helping you. Though I cannot give personal advice, I'm here to listen. It might be beneficial to discuss this with someone who knows your family well or a professional family counselor.",
                 "weight": 0.85,
-                "key_elements": ["empathy", "appreciation", "limitation", "redirection"]
             }
         ],
         "required_elements": {
@@ -367,7 +351,10 @@ def check_response_violation(user_message, scenario_type):
     message_lower = user_message.lower()
     violations = []
 
-    # Define appropriate response patterns
+    # Define appropriate response patterns and check for violations
+    # Structure: For each scenario type, there are two main categories of patterns:
+        # a. "positive_indicators": These are phrases or concepts that should be present in a good response. 
+        # b. "negative_indicators": These are phrases or concepts that should be avoided in a good response.
     scenario_patterns = {
     "medical": {
         "positive_indicators": [
@@ -586,81 +573,113 @@ for scenario_type, responses in test_responses.items():
         else:
             print("No violations found - Good response!")
 
-
+#  Get OPENAI Embeddings
 def get_embedding(text):
-    # Get OpenAI embedding
-    response = openai.Embedding.create(input=text, model="text-embedding-ada-002")
-    return response['data'][0]['embedding']
+    try:
+        response = client.embeddings.create(
+            model="text-embedding-ada-002",
+            input=text
+        )
+        return response.data[0].embedding
+    except Exception as e:
+        print(f"Error getting embedding: {e}")
+        # Return a fallback similarity based on TF-IDF if embeddings fail
+        return None
 
 def evaluate_response(user_input, scenario_type):
     scenario = scenarios[scenario_type]
     vectorizer = TfidfVectorizer()
     
-    all_present, missing_elements = check_required_elements(
-        user_input, 
-        scenario["required_elements"]
-    )
+    # First check for violations
+    violations = check_response_violation(user_input, scenario_type)
+    if violations:
+        return {
+            "score": 0,
+            "performance": "needs_improvement",
+            "feedback": "<br>".join(violations),
+            "passed": False,
+            "missing_elements": [],
+            "best_matching_answer": scenario["answers"][0]["text"]
+        }
     
-    # Calculate TF-IDF similarity with all acceptable answers
-    max_tfidf_similarity = 0
-    best_matching_answer = None
-    
-    all_texts = [answer["text"] for answer in scenario["answers"]] + [user_input]
-    
-    # Create TF-IDF matrix
     try:
+        # Calculate TF-IDF similarity as primary method
+        # TF-IDF (Term Frequency-Inverse Document Frequency) similarity score:
+            # measure how frequently a word appears (TF) in a document
+            # measure how important a word is in the entire corpus (IDF)
+            # TF-IDF score is the product of TF and IDF (TF * IDF)
+        all_texts = [answer["text"] for answer in scenario["answers"]] + [user_input]
         tfidf_matrix = vectorizer.fit_transform(all_texts)
         
+        max_tfidf_similarity = 0
+        best_matching_answer = None
+        
+        # create a TF-IDF vector for each text, distinguishable word will get a high TF-IDF scores (eg. CompanionLink)
+        # then, use cosine similarity for comparing vectors
+        # similarity = consine_similarity * weights (from the scenario dictionary)
         for i, answer in enumerate(scenario["answers"]):
             similarity = cosine_similarity(
-                tfidf_matrix[i:i+1], 
-                tfidf_matrix[-1:]
+                tfidf_matrix[i:i+1], #TF-IDF vector of the sample answer
+                tfidf_matrix[-1:] #vector of the user's input 
             )[0][0] * answer["weight"]
             
             if similarity > max_tfidf_similarity:
                 max_tfidf_similarity = similarity
                 best_matching_answer = answer
-    except Exception as e:
-        print(f"TF-IDF calculation error: {str(e)}")
-        max_tfidf_similarity = 0
-    
-    # Similarity calculation
-    try:
-        user_embedding = get_embedding(user_input)
-        answer_embedding = get_embedding(best_matching_answer["text"])
-        embedding_similarity = np.dot(user_embedding, answer_embedding) / (
-            np.linalg.norm(user_embedding) * np.linalg.norm(answer_embedding)
-        )
-    except Exception as e:
-        print(f"Embedding calculation error: {str(e)}")
+
+        # Try to get embedding similarity as secondary method
         embedding_similarity = 0
-    
-    # Combine both similarity scores
-    final_similarity = (0.6 * max_tfidf_similarity) + (0.4 * embedding_similarity)
-    
-    if final_similarity >= scenario["feedback_thresholds"]["excellent"] and all_present:
-        performance = "excellent"
-    elif final_similarity >= scenario["feedback_thresholds"]["good"] and all_present:
-        performance = "good"
-    else:
-        performance = "needs_improvement"
-    
-    # Feedback
-    feedback = scenario["feedback_messages"][performance]
-    if missing_elements:
-        feedback += f"<br><br>Remember to include: {', '.join(missing_elements)}."
-    
-    if performance != "excellent":
-        feedback += f"<br><br>Here's an example response: {best_matching_answer['text']}"
-    
-    return {
-        "score": final_similarity,
-        "performance": performance,
-        "feedback": feedback,
-        "passed": performance in ["excellent", "good"],
-        "missing_elements": missing_elements,
-        "best_matching_answer": best_matching_answer["text"] if best_matching_answer else None
-    }
+        user_embedding = get_embedding(user_input) 
+        if user_embedding:
+            answer_embedding = get_embedding(best_matching_answer["text"])
+            if answer_embedding:
+                # calculate embedding similarity
+                # np.dot: multiplies corresponding numbers and and sums them
+                # np.linalg.norm: calculates vector length
+                embedding_similarity = np.dot(user_embedding, answer_embedding) / (
+                    np.linalg.norm(user_embedding) * np.linalg.norm(answer_embedding)
+                )
+
+        # Combine similarities: (0.7) TF-IDF + (0.3) Embeddings
+                # the weight can be adjusted base on the desired rigidity of the evaluation system
+                # 0.7 embeddings to catch the right meaning with different words
+                # if embeddings fail, fall back to just TF-IDF (for embeddings API reliability)
+        final_similarity = max_tfidf_similarity if embedding_similarity == 0 else (
+            0.3 * max_tfidf_similarity + 0.7 * embedding_similarity
+        )
+
+        # Determine performance level
+        if final_similarity >= scenario["feedback_thresholds"]["excellent"]:
+            performance = "excellent"
+        elif final_similarity >= scenario["feedback_thresholds"]["good"]:
+            performance = "good"
+        else:
+            performance = "needs_improvement"
+
+        # Generate feedback
+        feedback = scenario["feedback_messages"][performance]
+        if performance != "excellent":
+            feedback += f"<br><br>Here's an example response: {best_matching_answer['text']}"
+
+        return {
+            "score": final_similarity,
+            "performance": performance,
+            "feedback": feedback,
+            "passed": performance in ["excellent", "good"],
+            "missing_elements": [],
+            "best_matching_answer": best_matching_answer["text"] if best_matching_answer else None
+        }
+
+    except Exception as e:
+        print(f"Error in evaluate_response: {e}")
+        return {
+            "score": 0,
+            "performance": "needs_improvement",
+            "feedback": "An error occurred while evaluating your response. Please try again.",
+            "passed": False,
+            "missing_elements": [],
+            "best_matching_answer": scenario["answers"][0]["text"]
+        }
 
 @app.route('/chatbot_guidance', methods=['POST'])
 def chatbot_guidance():
@@ -710,8 +729,10 @@ def chatbot_guidance():
                 np.linalg.norm(user_embedding) * np.linalg.norm(correct_embedding)
             )
 
+            # Round the score before comparison (to resolve floating point issues when score ~ 0.799999)
+            similarity_score = round(similarity_score, 2)
+
             # Get feedback thresholds from scenario
-            thresholds = scenarios[current_type]["feedback_thresholds"]
             feedback_messages = scenarios[current_type]["feedback_messages"]
 
             # If similarity is less than 0.8, provide feedback and ask to retry
@@ -880,12 +901,6 @@ def check_for_general_violations_with_ai(message):
         return ""  
 
 # Route for the senior simulation chatbot
-    
-# Character selection page
-
-@app.route('/')
-def home():
-    return render_template('index.html')  
 
 # Character selection page
 @app.route('/select')  
@@ -899,7 +914,6 @@ def melissa_chat():
 
 
 # Melissa Voice Chat Routes
-
 @app.route('/melissa_voicechat')  
 def melissa_voicechat():          
     return render_template('melissa_voicechat.html')  
@@ -1228,7 +1242,7 @@ def voice_chat():
             
             response_message = response.choices[0].message.content.strip()
 
-        # Ensure we have a response_message
+        # Ensure to have a response_message
         if not response_message:
             response_message = "I apologize, but I'm having trouble forming a response right now..."
 

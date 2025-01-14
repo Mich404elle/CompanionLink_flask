@@ -271,7 +271,8 @@
         }
 
         .progress {
-            height: 6px;  /* Slightly smaller progress bar height */
+            height: 6px;
+            /* Slightly smaller progress bar height */
         }
 
         .progress-bar {
@@ -552,12 +553,15 @@
 
             /* Add the rapport-metrics styles here */
             .rapport-metrics {
-                grid-template-columns: repeat(2, 1fr);  /* Keep two columns */
-                gap: 0.5rem;  /* Smaller gap on mobile */
+                grid-template-columns: repeat(2, 1fr);
+                /* Keep two columns */
+                gap: 0.5rem;
+                /* Smaller gap on mobile */
             }
 
             .metric-item {
-                padding: 0.5rem;  /* Even more compact on mobile */
+                padding: 0.5rem;
+                /* Even more compact on mobile */
             }
 
             .chat-header {
@@ -738,7 +742,7 @@
                 let isRecording = false;
                 let currentAudio = null;
                 let recordingStream = null;
-                // At the top of your script, modify the session ID initialization:
+
                 const sessionId = (() => {
                     // Try to get existing session ID from localStorage
                     const existingSession = localStorage.getItem('currentChatSession');
@@ -834,22 +838,22 @@
                             return new Promise((resolve, reject) => {
                                 audio.preload = 'auto';
 
-                                // Create a visible button for user interaction
+                                // Create a visible button for user interaction 
                                 const tempButton = document.createElement('button');
                                 tempButton.textContent = "Play Response";
                                 tempButton.style.cssText = `
-                    position: fixed;
-                    bottom: 20px;
-                    right: 20px;
-                    z-index: 1000;
-                    padding: 10px 20px;
-                    background: #000;
-                    color: #fff;
-                    border: none;
-                    border-radius: 4px;
-                    cursor: pointer;
-                    font-weight: bold;
-                `;
+                                    position: fixed;
+                                    bottom: 20px;
+                                    right: 20px;
+                                    z-index: 1000;
+                                    padding: 10px 20px;
+                                    background: #000;
+                                    color: #fff;
+                                    border: none;
+                                    border-radius: 4px;
+                                    cursor: pointer;
+                                    font-weight: bold;
+                                `;
                                 document.body.appendChild(tempButton);
 
                                 const playAttempt = async () => {
