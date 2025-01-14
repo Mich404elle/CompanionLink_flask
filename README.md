@@ -77,6 +77,12 @@ python app.py
 
 ## Usage
 
+### Guidance System
+- `/guidance` - Access training materials
+- `/chat_guidance` - Interactive scenario practice
+- Real-time violation checking
+- Structured feedback on responses
+- 
 ### Character Selection
 - Navigate to `/select` to choose between Melissa or Ian
 - Each character provides unique training scenarios and challenges
@@ -92,11 +98,6 @@ python app.py
 - Speech-to-text and text-to-speech functionality
 - Natural conversation practice
 
-### Guidance System
-- `/guidance` - Access training materials
-- `/chat_guidance` - Interactive scenario practice
-- Real-time violation checking
-- Structured feedback on responses
 
 ## Scoring System
 
@@ -105,13 +106,6 @@ python app.py
 - Engagement (0-100)
 - Flow (0-100)
 - Respect (0-100)
-
-### Achievement System
-- First Connection
-- Patient Listener
-- Trust Builder
-- Respectful Boundaries
-- Empathy Master
 
 ## Security Features
 
